@@ -33,3 +33,6 @@ Thumbs.db
 .npm/
 .pnpm-store/
 .yarn/
+
+.vercel
+.env*

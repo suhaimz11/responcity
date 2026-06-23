@@ -3118,8 +3118,41 @@ function HelperHome({ onSwitch }: { onSwitch: () => void }) {
 }
 
 export default function App() {
+  type Stage = "splash" | "mode" | "user" | "helper";
   const [stage, setStage] = useState<"splash" | "mode" | "user" | "helper">("splash");
   const [showSplash, setShowSplash] = useState(true);
+  const [history, setHistory] = useState<Stage[]>([]);
+
+  const activeStage = showSplash ? "splash" : stage;
+
+  function navigate(next: Stage) {
+    setShowSplash(false);
+    if (next === stage) return;
+    setHistory(prev => [...prev, stage]);
+    setStage(next);
+  }
+
+  function goBack() {
+    setShowSplash(false);
+    setHistory(prev => {
+      const nextHistory = [...prev];
+      const previous = nextHistory.pop();
+      setStage(previous ?? "mode");
+      return nextHistory;
+    });
+  }
+
+  function goHome() {
+    setShowSplash(false);
+    setHistory([]);
+    setStage("mode");
+  }
+
+  const navItems: { id: Stage; label: string; icon: string }[] = [
+    { id: "mode", label: "Home", icon: "⌂" },
+    { id: "user", label: "Need Help", icon: "SOS" },
+    { id: "helper", label: "Helper", icon: "+" },
+  ];
 
   return (
     <>
@@ -3150,19 +3183,243 @@ export default function App() {
           min-height: 100vh;
           background: #1C0A00;
         }
+
+        body {
+          overflow-x: hidden;
+        }
+
+        .app-shell {
+          min-height: 100vh;
+          background:
+            radial-gradient(circle at top left, rgba(255,107,53,0.12), transparent 34rem),
+            radial-gradient(circle at top right, rgba(0,137,123,0.12), transparent 32rem),
+            #fff8f5;
+          font-family: 'Nunito', sans-serif;
+        }
+
+        .app-top-nav {
+          position: sticky;
+          top: 0;
+          z-index: 250;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          padding: 14px clamp(16px, 4vw, 42px);
+          background: rgba(255, 248, 245, 0.88);
+          border-bottom: 1px solid rgba(255,87,34,0.13);
+          backdrop-filter: blur(18px);
+        }
+
+        .app-brand {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          text-align: left;
+        }
+
+        .app-brand img {
+          width: 38px;
+          height: 38px;
+          border-radius: 12px;
+          object-fit: cover;
+          background: #fff;
+          box-shadow: 0 4px 14px rgba(255,87,34,0.18);
+        }
+
+        .app-brand-title {
+          font-family: 'Poppins', sans-serif;
+          font-size: 18px;
+          font-weight: 900;
+          color: #1C0A00;
+          line-height: 1;
+        }
+
+        .app-brand-subtitle {
+          font-size: 11px;
+          font-weight: 800;
+          color: #A07060;
+          margin-top: 3px;
+        }
+
+        .app-nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .app-nav-button {
+          border: 1px solid rgba(255,87,34,0.13);
+          background: #fff;
+          color: #1C0A00;
+          border-radius: 999px;
+          padding: 9px 14px;
+          font-size: 12px;
+          font-weight: 900;
+          cursor: pointer;
+          box-shadow: 0 3px 12px rgba(255,87,34,0.06);
+        }
+
+        .app-nav-button.active {
+          border-color: transparent;
+          background: linear-gradient(135deg,#FF6B35,#FF1744);
+          color: #fff;
+          box-shadow: 0 8px 22px rgba(255,87,34,0.28);
+        }
+
+        .app-nav-button.back {
+          background: #fff7f2;
+          color: #A07060;
+        }
+
+        .app-content {
+          width: min(1120px, 100%);
+          margin: 0 auto;
+          min-height: calc(100vh - 67px);
+          background: #FFF8F5;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 0 80px rgba(0,0,0,0.12);
+        }
+
+        .app-bottom-nav {
+          display: none;
+        }
+
+        @media (min-width: 900px) {
+          .app-content > div {
+            min-height: calc(100vh - 67px) !important;
+          }
+
+          .app-content [style*="padding: 52px 22px"] {
+            padding-left: 42px !important;
+            padding-right: 42px !important;
+          }
+        }
+
+        @media (max-width: 720px) {
+          .app-top-nav {
+            padding: 10px 14px;
+          }
+
+          .app-brand-title {
+            font-size: 16px;
+          }
+
+          .app-brand-subtitle {
+            display: none;
+          }
+
+          .app-nav-actions {
+            display: none;
+          }
+
+          .app-content {
+            width: 100%;
+            min-height: calc(100vh - 59px);
+            box-shadow: none;
+          }
+
+          .app-bottom-nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 300;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            padding: 7px 8px max(7px, env(safe-area-inset-bottom));
+            background: rgba(255,255,255,0.94);
+            border-top: 1px solid rgba(255,87,34,0.13);
+            backdrop-filter: blur(16px);
+          }
+
+          .app-bottom-nav button {
+            border: none;
+            background: transparent;
+            border-radius: 14px;
+            padding: 7px 4px;
+            color: #A07060;
+            font-size: 10px;
+            font-weight: 900;
+            cursor: pointer;
+          }
+
+          .app-bottom-nav button.active {
+            background: #FFF0EB;
+            color: #FF1744;
+          }
+
+          .app-bottom-nav strong {
+            display: block;
+            font-size: 13px;
+            line-height: 1.1;
+            margin-bottom: 2px;
+          }
+        }
       `}</style>
-      <div style={{
-        maxWidth: 430, margin: "0 auto", minHeight: "100vh",
-        background: "#FFF8F5", position: "relative", overflow: "hidden",
-        fontFamily: "'Nunito',sans-serif",
-        boxShadow: "0 0 80px rgba(0,0,0,0.22)",
-      }}>
-        {showSplash && (
-          <Splash onDone={() => { setShowSplash(false); setStage("mode"); }} />
+      <div className="app-shell">
+        {!showSplash && (
+          <header className="app-top-nav">
+            <button className="app-brand" onClick={goHome} aria-label="Go to Responcity home">
+              <img src="/responcity-logo.png" alt="" />
+              <span>
+                <span className="app-brand-title">Responcity</span>
+                <span className="app-brand-subtitle">Help is just a tap away</span>
+              </span>
+            </button>
+
+            <nav className="app-nav-actions" aria-label="Primary navigation">
+              {history.length > 0 && (
+                <button className="app-nav-button back" onClick={goBack}>Back</button>
+              )}
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  className={`app-nav-button ${activeStage === item.id ? "active" : ""}`}
+                  onClick={() => item.id === "mode" ? goHome() : navigate(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </header>
         )}
-        {stage === "mode" && <ModeSelect onSelect={m => setStage(m as "user" | "helper")} />}
-        {stage === "user" && <RequesterHome onSwitch={() => setStage("mode")} />}
-        {stage === "helper" && <HelperHome onSwitch={() => setStage("mode")} />}
+
+        <main className="app-content">
+          {showSplash && (
+            <Splash onDone={() => { setShowSplash(false); setStage("mode"); }} />
+          )}
+          {stage === "mode" && <ModeSelect onSelect={m => navigate(m as "user" | "helper")} />}
+          {stage === "user" && <RequesterHome onSwitch={goHome} />}
+          {stage === "helper" && <HelperHome onSwitch={goHome} />}
+        </main>
+
+        {!showSplash && (
+          <nav
+            className="app-bottom-nav"
+            aria-label="Mobile navigation"
+            style={{ gridTemplateColumns: `repeat(${history.length > 0 ? 4 : 3}, 1fr)` }}
+          >
+            {history.length > 0 && (
+              <button onClick={goBack}><strong>‹</strong>Back</button>
+            )}
+            {navItems.map(item => (
+              <button
+                key={item.id}
+                className={activeStage === item.id ? "active" : ""}
+                onClick={() => item.id === "mode" ? goHome() : navigate(item.id)}
+              >
+                <strong>{item.icon}</strong>{item.label}
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
     </>
   );
