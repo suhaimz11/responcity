@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Responcity",
+    "slug": "responcity-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "responcity",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.responcity.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Responcity uses your location to alert nearby verified responders during an emergency."
+      }
+    },
+    "android": {
+      "package": "com.responcity.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "replace-with-eas-project-id-when-created"
+      }
+    }
+  }
+}
