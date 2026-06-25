@@ -1,9 +1,13 @@
 # Dependencies
 node_modules/
+mobile/node_modules/
 
 # Build output
 dist/
 build/
+mobile/dist/
+mobile/build/
+mobile/web-build/
 
 # Logs
 *.log
@@ -20,6 +24,16 @@ pnpm-debug.log*
 # Vercel
 .vercel/
 
+# Expo / React Native
+.expo/
+mobile/.expo/
+mobile/.expo-shared/
+mobile/android/
+mobile/ios/
+mobile/*.apk
+mobile/*.aab
+mobile/*.ipa
+
 # IDE and OS files
 .vscode/
 .idea/
@@ -33,6 +47,3 @@ Thumbs.db
 .npm/
 .pnpm-store/
 .yarn/
-
-.vercel
-.env*
