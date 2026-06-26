@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -45,6 +46,7 @@ type Request = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
+const responcityLogo = require("../assets/responcity-logo.jpg");
 
 const theme = {
   orange: "#FF6B35",
@@ -109,7 +111,7 @@ function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void 
     <LinearGradient colors={[theme.orange, theme.red]} style={styles.hero}>
       <View style={styles.heroRow}>
         <View style={styles.logoMark}>
-          <Text style={styles.logoText}>R</Text>
+          <Image source={responcityLogo} style={styles.logoImage} />
         </View>
         <View style={styles.heroTextWrap}>
           <Text style={styles.brand}>Responcity</Text>
@@ -527,11 +529,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
-  logoText: {
-    color: theme.red,
-    fontSize: 28,
-    fontWeight: "900",
+  logoImage: {
+    width: 52,
+    height: 52,
+    resizeMode: "cover",
   },
   heroTextWrap: {
     flex: 1,
