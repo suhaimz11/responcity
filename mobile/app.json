@@ -7,7 +7,7 @@
     "userInterfaceStyle": "light",
     "scheme": "responcity",
     "splash": {
-      "image": "./assets/responcity-logo.jpg",
+      "image": "./assets/responcity-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#FAFCFF"
     },

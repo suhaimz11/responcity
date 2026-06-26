@@ -26,6 +26,8 @@ type RootStackParamList = {
   HelperTabs: undefined;
   Timeline: undefined;
   RequestDetails: { categoryId: string };
+  AboutUs: undefined;
+  PrivacyPolicy: undefined;
 };
 
 type Category = {
@@ -46,9 +48,16 @@ type Request = {
   urgent: boolean;
 };
 
+type LegalSection = {
+  title: string;
+  body: string[];
+  accent?: string;
+};
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 const responcityLogo = require("../assets/responcity-logo.jpg");
+const responcitySplash = require("../assets/responcity-splash.png");
 
 const theme = {
   orange: "#FF6B35",
@@ -99,6 +108,135 @@ const nearbyRequests: Request[] = [
     distance: "1.1 km",
     eta: "7 min",
     urgent: false,
+  },
+];
+
+const aboutSections: LegalSection[] = [
+  {
+    title: "Who We Are",
+    body: [
+      "Responcity is a one-tap emergency response platform connecting people in crisis to nearby verified community responders within seconds.",
+      "We are building the missing coordination layer between \"I need help\" and \"help has arrived\" - city by city, country by country.",
+      "We are not a government service or a helpline. We are the network that fills the gap before official help arrives, powered by people nearby.",
+    ],
+    accent: "#2563EB",
+  },
+  {
+    title: "Why We Exist",
+    body: [
+      "The problem is not a lack of willing helpers. It is a lack of coordination.",
+      "The trained nurse two buildings away or the off-duty paramedic around the corner may never know someone needs help. Responcity closes that connection gap.",
+    ],
+    accent: "#F97316",
+  },
+  {
+    title: "What We Do",
+    body: [
+      "When you tap SOS, Responcity alerts the nearest verified responder with your live location and medical profile.",
+      "They accept, navigate, and arrive with live tracking. If nobody responds within 90 seconds, official emergency services can be contacted on your behalf.",
+      "Tap SOS once. Location shared. Responder alerted. Track live. Help arrives.",
+    ],
+    accent: "#0EA5E9",
+  },
+  {
+    title: "Who We Serve",
+    body: [
+      "Citizens who may need urgent help. Responders who want to make a real difference. Organizations that want better safety. Governments building smarter community emergency infrastructure.",
+    ],
+    accent: "#16A34A",
+  },
+  {
+    title: "Our Vision",
+    body: [
+      "A world where nobody faces a crisis alone. A world where help is always seconds away.",
+      "We are not building an app. We are building the emergency response infrastructure the world never had.",
+    ],
+    accent: "#1B2A6B",
+  },
+  {
+    title: "Our Values",
+    body: [
+      "We believe in strangers: people who show up for someone they have never met.",
+      "Technology serves humanity: our platform amplifies human connection, it does not replace it.",
+      "Trust is earned one response at a time. Every life is worth showing up for.",
+    ],
+    accent: "#7C3AED",
+  },
+];
+
+const privacySections: LegalSection[] = [
+  {
+    title: "Who We Are",
+    body: [
+      "Responcity is operated by Responcity Technologies Private Limited, registered and operating in Bengaluru, Karnataka, India.",
+      "This Privacy Policy applies to citizens, verified responders, and B2B clients using our mobile app and web dashboard.",
+      "Contact for privacy: imailresponcity@gmail.com.",
+    ],
+  },
+  {
+    title: "Information We Collect",
+    body: [
+      "Account information such as name, mobile number, email address, and profile photo.",
+      "Medical profile details such as blood group, allergies, medical conditions, medications, and emergency contacts.",
+      "Real-time GPS location during active SOS events and app use, responder verification documents, incident records, device information, payment records, usage data, and support communications.",
+      "Medical information, location data, and identity documents are treated as sensitive personal data.",
+    ],
+  },
+  {
+    title: "Why We Collect Data",
+    body: [
+      "We use data to connect citizens in distress to nearby verified responders, share critical medical profiles, enable live tracking, verify responders, auto-escalate emergencies, create incident records, process payments, improve the platform, communicate with users, and comply with law.",
+      "We never sell your personal data and never use it for advertising.",
+    ],
+  },
+  {
+    title: "Location Data",
+    body: [
+      "During SOS events, your real-time GPS location is shared only with your assigned responder and Responcity operations team for the active incident.",
+      "Responder GPS data is shared with the citizen during active incidents only.",
+      "We do not continuously track your location when you are not involved in an active incident.",
+      "You may withdraw location permission, but SOS alerts and responder matching may stop working.",
+    ],
+  },
+  {
+    title: "Medical Data",
+    body: [
+      "Your medical profile is voluntary and is shared only with your assigned responder during an active SOS event.",
+      "It is never used for research, advertising, insurance underwriting, or unrelated commercial purposes.",
+      "You may update or delete your medical profile at any time.",
+    ],
+  },
+  {
+    title: "How We Share Data",
+    body: [
+      "Assigned responders receive the minimum information needed to reach and help you.",
+      "Emergency services may receive location and basic incident details if an incident is escalated.",
+      "Operations teams, B2B clients, legal authorities, and technology partners receive only what is necessary for safety, compliance, or platform operation.",
+      "We never sell, rent, or trade personal data.",
+    ],
+  },
+  {
+    title: "Security and Retention",
+    body: [
+      "We use encryption, HTTPS, role-based access, two-factor admin authentication, audit logs, secure cloud infrastructure, backups, and breach response protocols.",
+      "Incident records and incident-related location, audio, or video data may be retained for a minimum of 7 years for legal compliance.",
+      "Payment records may be retained for 8 years for financial and tax compliance. Other records are deleted or anonymized after their retention period.",
+    ],
+  },
+  {
+    title: "Your Rights",
+    body: [
+      "Under Indian law, you may request access, correction, deletion, withdrawal of consent, grievance redressal, and nomination rights related to your personal data.",
+      "To exercise your rights, contact imailresponcity@gmail.com. We aim to respond within 30 days.",
+    ],
+  },
+  {
+    title: "Children, Tracking, and Third Parties",
+    body: [
+      "Responcity is not intended for children under 18 without parent or guardian consent.",
+      "The mobile app does not use browser cookies, but may use device identifiers, analytics SDKs, and crash reporting tools for app operation and improvement.",
+      "Third-party services such as cloud hosting, maps, payments, and messaging are used only as needed to operate the platform.",
+    ],
   },
 ];
 
@@ -163,6 +301,16 @@ function ModeScreen({ navigation }: any) {
           For collaboration/business inquiries contact{" "}
           <Text style={styles.homeContactEmail}>imailresponcity@gmail.com</Text>
         </Text>
+        <View style={styles.homeLegalLinks}>
+          <Pressable style={({ pressed }) => [styles.homeLegalButton, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("AboutUs")}>
+            <Ionicons name="information-circle" size={16} color="#1652B7" />
+            <Text style={styles.homeLegalText}>About Us</Text>
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.homeLegalButton, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("PrivacyPolicy")}>
+            <Ionicons name="shield-checkmark" size={16} color="#1652B7" />
+            <Text style={styles.homeLegalText}>Privacy Policy</Text>
+          </Pressable>
+        </View>
       </View>
     </Screen>
   );
@@ -678,7 +826,91 @@ function InfoCard({ title, lines }: { title: string; lines: string[] }) {
   );
 }
 
+function LegalScreen({
+  navigation,
+  title,
+  subtitle,
+  sections,
+  updated,
+}: {
+  navigation: any;
+  title: string;
+  subtitle: string;
+  sections: LegalSection[];
+  updated?: string;
+}) {
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={styles.legalScroll}>
+        <LinearGradient colors={["#EFF6FF", "#ECFEFF"]} style={styles.legalHero}>
+          <Pressable style={styles.legalBackButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={22} color="#1B2A6B" />
+          </Pressable>
+          <Image source={responcitySplash} style={styles.legalLogo} />
+          <Text style={styles.legalEyebrow}>RESPONCITY</Text>
+          <Text style={styles.legalTitle}>{title}</Text>
+          <Text style={styles.legalSubtitle}>{subtitle}</Text>
+        </LinearGradient>
+
+        {sections.map((section, index) => (
+          <View key={section.title} style={styles.legalCard}>
+            <View style={[styles.legalAccent, { backgroundColor: section.accent ?? "#2563EB" }]} />
+            <View style={styles.legalCardHeader}>
+              <Text style={styles.legalNumber}>{String(index + 1).padStart(2, "0")}</Text>
+              <Text style={styles.legalSectionTitle}>{section.title}</Text>
+            </View>
+            {section.body.map(paragraph => (
+              <Text key={paragraph} style={styles.legalParagraph}>{paragraph}</Text>
+            ))}
+          </View>
+        ))}
+
+        <View style={styles.legalFooter}>
+          <Text style={styles.legalFooterTitle}>Responcity</Text>
+          <Text style={styles.legalFooterText}>Help is just a tap away</Text>
+          <Text style={styles.legalFooterEmail}>imailresponcity@gmail.com</Text>
+          {updated ? <Text style={styles.legalUpdated}>{updated}</Text> : null}
+        </View>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+function AboutUsScreen({ navigation }: any) {
+  return (
+    <LegalScreen
+      navigation={navigation}
+      title="About Us"
+      subtitle="A community-powered emergency response platform connecting people in crisis to nearby verified helpers with a single tap."
+      sections={aboutSections}
+    />
+  );
+}
+
+function PrivacyPolicyScreen({ navigation }: any) {
+  return (
+    <LegalScreen
+      navigation={navigation}
+      title="Privacy Policy"
+      subtitle="How Responcity collects, uses, protects, and shares data while operating emergency response services."
+      sections={privacySections}
+      updated="Effective January 1, 2025 - Responcity Technologies Private Limited"
+    />
+  );
+}
+
 export default function App() {
+  const [showStartup, setShowStartup] = useState(true);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setShowStartup(false), 1400);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  if (showStartup) {
+    return <StartupScreen />;
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -687,12 +919,59 @@ export default function App() {
         <Stack.Screen name="HelperTabs" component={HelperTabs} />
         <Stack.Screen name="Timeline" component={TimelineScreen} />
         <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} />
+        <Stack.Screen name="AboutUs" component={AboutUsScreen} />
+        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
+function StartupScreen() {
+  return (
+    <SafeAreaView style={styles.startupScreen}>
+      <StatusBar style="dark" />
+      <View style={styles.startupLogoShell}>
+        <Image source={responcitySplash} style={styles.startupLogo} />
+      </View>
+      <Text style={styles.startupTitle}>Responcity</Text>
+      <Text style={styles.startupTagline}>Help is just a tap away</Text>
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
+  startupScreen: {
+    flex: 1,
+    backgroundColor: "#FAFCFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  startupLogoShell: {
+    width: 188,
+    height: 188,
+    borderRadius: 48,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  startupLogo: {
+    width: 170,
+    height: 170,
+    resizeMode: "contain",
+  },
+  startupTitle: {
+    color: "#192238",
+    fontSize: 30,
+    fontWeight: "900",
+    marginTop: 28,
+  },
+  startupTagline: {
+    color: "#7A8798",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 8,
+  },
   safe: {
     flex: 1,
     backgroundColor: "#FAFCFF",
@@ -879,6 +1158,164 @@ const styles = StyleSheet.create({
   homeContactEmail: {
     color: "#1652B7",
     fontWeight: "800",
+  },
+  homeLegalLinks: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+  },
+  homeLegalButton: {
+    minHeight: 38,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.1)",
+  },
+  homeLegalText: {
+    color: "#1652B7",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  legalScroll: {
+    paddingBottom: 28,
+    backgroundColor: "#F8FAFF",
+  },
+  legalHero: {
+    paddingHorizontal: 22,
+    paddingTop: 18,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    alignItems: "center",
+  },
+  legalBackButton: {
+    position: "absolute",
+    top: 18,
+    left: 18,
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  legalLogo: {
+    width: 86,
+    height: 86,
+    resizeMode: "contain",
+    marginTop: 18,
+  },
+  legalEyebrow: {
+    color: "#2563EB",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    marginTop: 8,
+  },
+  legalTitle: {
+    color: "#1B2A6B",
+    fontSize: 30,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 6,
+  },
+  legalSubtitle: {
+    color: "#64748B",
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 22,
+    textAlign: "center",
+    marginTop: 10,
+  },
+  legalCard: {
+    marginHorizontal: 18,
+    marginTop: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.1)",
+    shadowColor: "#14213D",
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 3,
+    overflow: "hidden",
+  },
+  legalAccent: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  legalCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+  legalNumber: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: "#EEF2FF",
+    color: "#1B2A6B",
+    fontSize: 12,
+    fontWeight: "900",
+    textAlign: "center",
+    textAlignVertical: "center",
+    paddingTop: 8,
+  },
+  legalSectionTitle: {
+    flex: 1,
+    color: "#1B2A6B",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  legalParagraph: {
+    color: "#334155",
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 22,
+    marginTop: 8,
+  },
+  legalFooter: {
+    marginHorizontal: 18,
+    marginTop: 18,
+    backgroundColor: "#1B2A6B",
+    borderRadius: 22,
+    padding: 22,
+    alignItems: "center",
+  },
+  legalFooterTitle: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  legalFooterText: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  legalFooterEmail: {
+    color: "#7DD3FC",
+    fontSize: 13,
+    fontWeight: "900",
+    marginTop: 14,
+  },
+  legalUpdated: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 16,
+    marginTop: 14,
   },
   pressed: {
     opacity: 0.82,
