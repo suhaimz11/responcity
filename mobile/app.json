@@ -6,6 +6,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "responcity",
+    "splash": {
+      "image": "./assets/responcity-logo.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAFCFF"
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#FAFCFF",
+      "barStyle": "dark-content"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],

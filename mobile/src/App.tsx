@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   FlatList,
   Image,
   Pressable,
@@ -24,6 +25,7 @@ type RootStackParamList = {
   RequesterTabs: undefined;
   HelperTabs: undefined;
   Timeline: undefined;
+  RequestDetails: { categoryId: string };
 };
 
 type Category = {
@@ -62,7 +64,9 @@ const theme = {
 
 const categories: Category[] = [
   { id: "medical", label: "Medical", icon: "medical", color: "#FF1744", bg: "#FFF0F3" },
+  { id: "blood", label: "Blood Donation", icon: "water", color: "#D50000", bg: "#FFF1F1" },
   { id: "accident", label: "Accident", icon: "car-sport", color: "#FF6D00", bg: "#FFF7EC" },
+  { id: "lost-found", label: "Lost & Found", icon: "search", color: "#5E35B1", bg: "#F4F0FF" },
   { id: "safety", label: "Safety", icon: "shield-checkmark", color: "#C62828", bg: "#FFF0F0" },
   { id: "mental", label: "Mental", icon: "heart", color: "#7C4DFF", bg: "#F4F0FF" },
   { id: "transport", label: "Transport", icon: "navigate", color: "#1565C0", bg: "#EEF4FF" },
@@ -140,21 +144,25 @@ function ModeScreen({ navigation }: any) {
           title="I Need Help"
           subtitle="Request emergency assistance from nearby helpers"
           icon="medkit"
-          colors={["#F4542B", "#EC1D25"]}
+          colors={["#FF5A3D", "#E71933"]}
           onPress={() => navigation.navigate("RequesterTabs")}
         />
         <ModeCard
           title="I Can Help"
           subtitle="Respond to requests from people in need nearby"
           icon="hand-left"
-          colors={["#218BE6", "#174EA6"]}
+          colors={["#1BA3F7", "#1652B7"]}
           onPress={() => navigation.navigate("HelperTabs")}
         />
         <View style={styles.homeStatsCard}>
           <HomeStat icon="people" value="2,841" label="Helpers" />
           <HomeStat icon="checkmark-done-circle" value="14,920" label="Missions" />
-          <HomeStat icon="navigate" value="50 mi" label="Coverage" />
+          <HomeStat icon="navigate" value="80 km" label="Coverage" />
         </View>
+        <Text style={styles.homeContact}>
+          For collaboration/business inquiries contact{" "}
+          <Text style={styles.homeContactEmail}>imailresponcity@gmail.com</Text>
+        </Text>
       </View>
     </Screen>
   );
@@ -203,13 +211,13 @@ function RequesterTabs({ navigation }: any) {
   return (
     <Tab.Navigator screenOptions={tabOptions}>
       <Tab.Screen
-        name="SOS"
+        name="Home"
         component={RequesterHome}
         initialParams={{ rootNavigation: navigation }}
-        options={{ tabBarIcon: tabIcon("alert-circle") }}
+        options={{ tabBarIcon: tabIcon("home") }}
       />
-      <Tab.Screen name="Profile" component={MedicalProfile} options={{ tabBarIcon: tabIcon("id-card") }} />
-      <Tab.Screen name="Contacts" component={EmergencyContacts} options={{ tabBarIcon: tabIcon("call") }} />
+      <Tab.Screen name="Check In" component={MedicalProfile} options={{ tabBarIcon: tabIcon("checkmark-circle") }} />
+      <Tab.Screen name="History" component={EmergencyContacts} options={{ tabBarIcon: tabIcon("time") }} />
     </Tab.Navigator>
   );
 }
@@ -236,12 +244,19 @@ function tabIcon(name: keyof typeof Ionicons.glyphMap) {
 const tabOptions = {
   headerShown: false,
   tabBarActiveTintColor: theme.red,
-  tabBarInactiveTintColor: theme.muted,
+  tabBarInactiveTintColor: "#6B7280",
   tabBarStyle: {
-    height: 68,
-    paddingBottom: 10,
+    height: 70,
+    paddingBottom: 12,
     paddingTop: 8,
-    borderTopColor: theme.border,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderTopColor: "rgba(22, 82, 183, 0.08)",
+    borderTopWidth: 1,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: -5 },
+    elevation: 12,
   },
   tabBarLabelStyle: {
     fontSize: 11,
@@ -250,10 +265,38 @@ const tabOptions = {
 };
 
 function RequesterHome({ navigation, route }: any) {
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(categories[0]);
-  const [message, setMessage] = useState("");
   const [locationStatus, setLocationStatus] = useState("Location not shared yet");
   const rootNavigation = route.params?.rootNavigation ?? navigation;
+  const radarPulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(radarPulse, {
+          toValue: 1,
+          duration: 1900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(radarPulse, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [radarPulse]);
+
+  const radarScale = radarPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.55, 1],
+  });
+  const radarOpacity = radarPulse.interpolate({
+    inputRange: [0, 0.72, 1],
+    outputRange: [0.34, 0.16, 0],
+  });
 
   async function requestLocation() {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -273,28 +316,63 @@ function RequesterHome({ navigation, route }: any) {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <BrandHeader mode="Requester mode" onSwitch={() => rootNavigation.navigate("Mode")} />
+        <RequesterHeader onSwitch={() => rootNavigation.navigate("Mode")} />
         <View style={styles.sosWrap}>
-          <Pressable style={({ pressed }) => [styles.sosButton, pressed && styles.pressed]} onPress={sendSos}>
-            <LinearGradient colors={[theme.orange, theme.red]} style={styles.sosGradient}>
-              <Ionicons name="alert" color="#fff" size={46} />
-              <Text style={styles.sosText}>SOS</Text>
-            </LinearGradient>
-          </Pressable>
-          <Text style={styles.helpText}>Tap once to alert nearby verified responders</Text>
+          <Text style={styles.sosPrompt}>Press the button for immediate help</Text>
+          <View style={styles.sosRadarStage}>
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.sosRadarRing, { opacity: radarOpacity, transform: [{ scale: radarScale }] }]}
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.sosRadarRing,
+                styles.sosRadarRingDelay,
+                {
+                  opacity: radarOpacity,
+                  transform: [
+                    {
+                      scale: radarPulse.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.42, 0.78],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Pressable style={({ pressed }) => [styles.sosButton, pressed && styles.pressed]} onPress={sendSos}>
+              <LinearGradient colors={[theme.orange, theme.red]} style={styles.sosGradient}>
+                <Text style={styles.sosText}>SOS</Text>
+                <Text style={styles.sosSmallText}>Press for help</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
           <Text style={styles.locationText}>{locationStatus}</Text>
         </View>
 
-        <SectionTitle title="Choose emergency type" />
+        <View style={styles.requestSectionHeader}>
+          <Text style={styles.requestSectionTitle}>Request Specific Help</Text>
+          <View style={styles.termsPill}>
+            <Text style={styles.termsText}>T&C</Text>
+          </View>
+        </View>
+        <Text style={styles.requestSectionSub}>
+          Tap a category - you'll be asked for photo/video proof and a description
+        </Text>
         <View style={styles.categoryGrid}>
           {categories.map(cat => (
             <Pressable
               key={cat.id}
-              style={[
+              style={({ pressed }) => [
                 styles.categoryCard,
-                { backgroundColor: cat.bg, borderColor: selectedCategory?.id === cat.id ? cat.color : theme.border },
+                { backgroundColor: cat.bg, borderColor: "rgba(17, 24, 39, 0.06)" },
+                pressed && styles.categoryPressed,
               ]}
-              onPress={() => setSelectedCategory(cat)}
+              onPress={() => {
+                rootNavigation.navigate("RequestDetails", { categoryId: cat.id });
+              }}
             >
               <Ionicons name={cat.icon} size={25} color={cat.color} />
               <Text style={[styles.categoryText, { color: cat.color }]}>{cat.label}</Text>
@@ -302,20 +380,118 @@ function RequesterHome({ navigation, route }: any) {
           ))}
         </View>
 
-        <SectionTitle title="Add context" />
-        <TextInput
-          value={message}
-          onChangeText={setMessage}
-          multiline
-          placeholder="Example: chest pain, accident, feeling unsafe..."
-          placeholderTextColor={theme.muted}
-          style={styles.input}
-        />
-        <Pressable style={styles.primaryButton} onPress={sendSos}>
-          <Text style={styles.primaryButtonText}>Send {selectedCategory?.label ?? "Emergency"} Request</Text>
-        </Pressable>
+        <Text style={styles.buddiesTitle}>My Buddies</Text>
+        <View style={styles.buddyCard}>
+          <View style={styles.buddyAvatar}>
+            <Text style={styles.buddyInitial}>J</Text>
+            <View style={styles.buddyOnline} />
+          </View>
+        </View>
       </ScrollView>
     </Screen>
+  );
+}
+
+function RequestDetailsScreen({ navigation, route }: any) {
+  const category = categoryFor(route.params?.categoryId ?? "medical");
+  const [description, setDescription] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={styles.detailScroll}>
+        <RequesterHeader onSwitch={() => navigation.navigate("Mode")} />
+        <View style={styles.detailSheet}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.detailTopRow}>
+            <View style={[styles.detailCategoryPill, { backgroundColor: category.bg }]}>
+              <Ionicons name={category.icon} size={21} color={category.color} />
+              <Text style={[styles.detailCategoryText, { color: category.color }]}>{category.label} Request</Text>
+            </View>
+            <Pressable style={styles.detailCloseButton} onPress={() => navigation.goBack()}>
+              <Ionicons name="close" size={19} color="#6B7280" />
+            </Pressable>
+          </View>
+
+          <Text style={styles.detailLabel}>Photo or Video Proof <Text style={styles.required}>*</Text></Text>
+          <Text style={styles.detailHelp}>Take a direct photo or short video (max 30s) to verify your emergency.</Text>
+
+          <View style={styles.proofBox}>
+            <Ionicons name="camera-outline" size={34} color="#9CA3AF" />
+            <Text style={styles.proofText}>Use your camera to capture proof</Text>
+            <View style={styles.proofActions}>
+              <Pressable style={[styles.proofButton, styles.photoButton]}>
+                <Ionicons name="camera" size={17} color="#fff" />
+                <Text style={styles.proofButtonText}>Take Photo</Text>
+              </Pressable>
+              <Pressable style={[styles.proofButton, styles.videoButton]}>
+                <Ionicons name="videocam" size={17} color="#fff" />
+                <Text style={styles.proofButtonText}>Record Video</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <Text style={styles.detailLabel}>Describe Your Situation <Text style={styles.required}>*</Text></Text>
+          <TextInput
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            maxLength={300}
+            placeholder="Briefly explain what you need help with, where you are, and any important details..."
+            placeholderTextColor="#8B95A1"
+            style={styles.detailInput}
+          />
+          <Text style={styles.charCount}>{description.length}/300</Text>
+
+          <Pressable style={styles.confirmBox} onPress={() => setConfirmed(value => !value)}>
+            <View style={[styles.checkboxBox, confirmed && styles.checkboxChecked]}>
+              {confirmed ? <Ionicons name="checkmark" size={15} color="#fff" /> : null}
+            </View>
+            <View style={styles.confirmCopy}>
+              <Text style={styles.confirmText}>
+                This is <Text style={styles.confirmStrong}>NOT a fake request.</Text> I understand that submitting false
+                emergencies is a violation and admin may take action against my account.
+              </Text>
+              <Text style={styles.termsLink}>View full Terms &amp; Conditions -&gt;</Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.requestHelpButton,
+              (!confirmed || description.trim().length === 0) && styles.requestHelpButtonDisabled,
+              pressed && confirmed && description.trim().length > 0 && styles.pressed,
+            ]}
+            disabled={!confirmed || description.trim().length === 0}
+            onPress={() => navigation.navigate("Timeline")}
+          >
+            <Ionicons name="send" size={18} color="#fff" />
+            <Text style={styles.requestHelpButtonText}>Request Help</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+function RequesterHeader({ onSwitch }: { onSwitch: () => void }) {
+  return (
+    <LinearGradient colors={["#FF5A3D", "#E71933"]} style={styles.requesterHeader}>
+      <View style={styles.requesterHeaderLogo}>
+        <Image source={responcityLogo} style={styles.requesterHeaderLogoImage} />
+      </View>
+      <View style={styles.requesterHeaderCopy}>
+        <Text style={styles.requesterEyebrow}>REQUESTER MODE</Text>
+        <Text style={styles.requesterTitle}>Need Help?</Text>
+      </View>
+      <Pressable style={styles.headerIconButton}>
+        <Ionicons name="notifications-outline" size={18} color="#fff" />
+      </Pressable>
+      <Pressable style={styles.headerSwitchButton} onPress={onSwitch}>
+        <Ionicons name="swap-horizontal" size={16} color="#fff" />
+        <Text style={styles.headerSwitchText}>Switch</Text>
+      </Pressable>
+    </LinearGradient>
   );
 }
 
@@ -510,6 +686,7 @@ export default function App() {
         <Stack.Screen name="RequesterTabs" component={RequesterTabs} />
         <Stack.Screen name="HelperTabs" component={HelperTabs} />
         <Stack.Screen name="Timeline" component={TimelineScreen} />
+        <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -518,13 +695,16 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#FFFDF9",
+    backgroundColor: "#FAFCFF",
   },
   scroll: {
     paddingBottom: 28,
   },
   listContent: {
     paddingBottom: 28,
+  },
+  detailScroll: {
+    paddingBottom: 30,
   },
   hero: {
     paddingHorizontal: 22,
@@ -588,53 +768,54 @@ const styles = StyleSheet.create({
   homeContent: {
     flex: 1,
     paddingHorizontal: 22,
-    paddingTop: 56,
+    paddingTop: 54,
+    paddingBottom: 22,
     alignItems: "center",
   },
   homeLogo: {
-    width: 104,
-    height: 104,
+    width: 112,
+    height: 112,
     resizeMode: "contain",
-    marginBottom: 30,
+    marginBottom: 28,
   },
   homeTitle: {
-    color: "#2D3748",
-    fontSize: 21,
-    fontWeight: "500",
+    color: "#192238",
+    fontSize: 23,
+    fontWeight: "700",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 9,
   },
   homeSubtitle: {
-    color: "#8B97A8",
+    color: "#7A8798",
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "600",
     textAlign: "center",
-    marginBottom: 28,
+    marginBottom: 30,
   },
   modeCardPress: {
     width: "100%",
-    borderRadius: 20,
-    marginBottom: 14,
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
+    borderRadius: 22,
+    marginBottom: 15,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 7,
   },
   modeCard: {
-    minHeight: 104,
-    borderRadius: 20,
-    paddingHorizontal: 20,
+    minHeight: 108,
+    borderRadius: 22,
+    paddingHorizontal: 19,
     paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
   },
   modeIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -655,29 +836,29 @@ const styles = StyleSheet.create({
   },
   homeStatsCard: {
     width: "100%",
-    minHeight: 92,
-    marginTop: 10,
+    minHeight: 94,
+    marginTop: 12,
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: "rgba(17, 24, 39, 0.06)",
+    borderColor: "rgba(22, 82, 183, 0.08)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.13,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 5,
   },
   homeStat: {
     flex: 1,
     alignItems: "center",
   },
   homeStatValue: {
-    color: "#2D3748",
+    color: "#1F2937",
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
     marginTop: 5,
   },
   homeStatLabel: {
@@ -686,35 +867,83 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginTop: 3,
   },
+  homeContact: {
+    marginTop: "auto",
+    color: "#7A8798",
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 17,
+    textAlign: "center",
+    paddingHorizontal: 8,
+  },
+  homeContactEmail: {
+    color: "#1652B7",
+    fontWeight: "800",
+  },
   pressed: {
     opacity: 0.82,
     transform: [{ scale: 0.98 }],
   },
   sosWrap: {
     alignItems: "center",
-    paddingVertical: 30,
+    paddingTop: 34,
+    paddingBottom: 18,
     paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginTop: -6,
+  },
+  sosRadarStage: {
+    width: 268,
+    height: 192,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "visible",
+  },
+  sosRadarRing: {
+    position: "absolute",
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: "rgba(255, 23, 68, 0.2)",
+    borderWidth: 2,
+    borderColor: "rgba(255, 23, 68, 0.14)",
+  },
+  sosRadarRingDelay: {
+    backgroundColor: "rgba(255, 90, 61, 0.16)",
+    borderColor: "rgba(255, 90, 61, 0.14)",
+  },
+  sosPrompt: {
+    color: "#6B7280",
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 28,
   },
   sosButton: {
-    width: 176,
-    height: 176,
-    borderRadius: 88,
+    width: 142,
+    height: 142,
+    borderRadius: 71,
     shadowColor: theme.red,
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
   sosGradient: {
     flex: 1,
-    borderRadius: 88,
+    borderRadius: 71,
     alignItems: "center",
     justifyContent: "center",
   },
   sosText: {
     color: "#fff",
-    fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: 3,
+    fontSize: 42,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  sosSmallText: {
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 12,
+    fontWeight: "700",
     marginTop: 4,
   },
   helpText: {
@@ -731,7 +960,101 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     textAlign: "center",
+    marginTop: 12,
+  },
+  requesterHeader: {
+    marginHorizontal: 0,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 22,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  requesterHeaderLogo: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  requesterHeaderLogoImage: {
+    width: 46,
+    height: 46,
+    resizeMode: "cover",
+  },
+  requesterHeaderCopy: {
+    flex: 1,
+  },
+  requesterEyebrow: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  requesterTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  headerIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  headerSwitchButton: {
+    height: 42,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+  headerSwitchText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  requestSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginTop: 4,
+    gap: 8,
+  },
+  requestSectionTitle: {
+    color: "#2D3748",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  termsPill: {
+    backgroundColor: "#EAF2F8",
+    borderRadius: 9,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  termsText: {
+    color: "#64748B",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  requestSectionSub: {
+    color: "#7A8798",
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+    marginHorizontal: 20,
     marginTop: 8,
+    marginBottom: 14,
   },
   sectionTitle: {
     color: theme.text,
@@ -744,21 +1067,81 @@ const styles = StyleSheet.create({
   categoryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    columnGap: 10,
+    rowGap: 10,
     paddingHorizontal: 20,
   },
   categoryCard: {
     width: "31%",
-    minHeight: 88,
-    borderWidth: 1.5,
-    borderRadius: 18,
+    minHeight: 92,
+    borderWidth: 1,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 7,
+    paddingHorizontal: 6,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   categoryText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
+    textAlign: "center",
+  },
+  categoryPressed: {
+    opacity: 0.78,
+    transform: [{ scale: 0.96 }],
+  },
+  buddiesTitle: {
+    color: "#2D3748",
+    fontSize: 16,
+    fontWeight: "900",
+    marginHorizontal: 20,
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  buddyCard: {
+    width: 82,
+    height: 82,
+    marginLeft: 20,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#14213D",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  buddyAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: "#2F75C8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buddyInitial: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "900",
+  },
+  buddyOnline: {
+    position: "absolute",
+    right: 2,
+    bottom: 2,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: "#22C55E",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   input: {
     minHeight: 110,
@@ -784,6 +1167,210 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#fff",
     fontSize: 15,
+    fontWeight: "900",
+  },
+  detailSheet: {
+    marginTop: -16,
+    marginHorizontal: 10,
+    backgroundColor: "#FFFDFB",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    paddingHorizontal: 22,
+    paddingTop: 12,
+    paddingBottom: 26,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 4,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 48,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "#D9DEE7",
+    marginBottom: 22,
+  },
+  detailTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 28,
+  },
+  detailCategoryPill: {
+    minHeight: 62,
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  detailCategoryText: {
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  detailCloseButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  detailLabel: {
+    color: "#374151",
+    fontSize: 17,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
+  required: {
+    color: theme.red,
+  },
+  detailHelp: {
+    color: "#6B7280",
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 22,
+    marginBottom: 22,
+  },
+  proofBox: {
+    minHeight: 244,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 18,
+    marginBottom: 26,
+  },
+  proofText: {
+    color: "#6B7280",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 22,
+  },
+  proofActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 22,
+  },
+  proofButton: {
+    minWidth: 130,
+    height: 50,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  photoButton: {
+    backgroundColor: "#2F6FBA",
+  },
+  videoButton: {
+    backgroundColor: "#F45A3D",
+  },
+  proofButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  detailInput: {
+    minHeight: 126,
+    backgroundColor: "#F4F6F8",
+    borderColor: "#D5DAE2",
+    borderWidth: 1.2,
+    borderRadius: 16,
+    padding: 14,
+    color: "#1F2937",
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+    textAlignVertical: "top",
+  },
+  charCount: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "800",
+    alignSelf: "flex-end",
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  confirmBox: {
+    borderRadius: 16,
+    borderWidth: 1.2,
+    borderColor: "rgba(239, 68, 68, 0.28)",
+    backgroundColor: "rgba(254, 242, 242, 0.75)",
+    padding: 14,
+    flexDirection: "row",
+    gap: 12,
+  },
+  checkboxBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    borderColor: theme.red,
+    backgroundColor: theme.red,
+  },
+  confirmCopy: {
+    flex: 1,
+  },
+  confirmText: {
+    color: "#4B5563",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  confirmStrong: {
+    color: "#E11D48",
+    fontWeight: "900",
+  },
+  termsLink: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 8,
+  },
+  requestHelpButton: {
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: theme.red,
+    marginTop: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: theme.red,
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 4,
+  },
+  requestHelpButtonDisabled: {
+    backgroundColor: "#CBD5E1",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  requestHelpButtonText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "900",
   },
   timelineHero: {
