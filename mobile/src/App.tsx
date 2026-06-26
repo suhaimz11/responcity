@@ -131,24 +131,30 @@ function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void 
 function ModeScreen({ navigation }: any) {
   return (
     <Screen>
-      <StatusBar style="light" />
-      <BrandHeader />
-      <View style={styles.modeContent}>
-        <Text style={styles.modeTitle}>How will you use Responcity today?</Text>
+      <StatusBar style="dark" />
+      <View style={styles.homeContent}>
+        <Image source={responcityLogo} style={styles.homeLogo} />
+        <Text style={styles.homeTitle}>How can Responcity help?</Text>
+        <Text style={styles.homeSubtitle}>Community emergency assistance - available now</Text>
         <ModeCard
           title="I Need Help"
-          subtitle="Send SOS, share live location, and reach nearby verified responders."
-          icon="alert-circle"
-          colors={[theme.orange, theme.red]}
+          subtitle="Request emergency assistance from nearby helpers"
+          icon="medkit"
+          colors={["#F4542B", "#EC1D25"]}
           onPress={() => navigation.navigate("RequesterTabs")}
         />
         <ModeCard
-          title="I'm Ready to Help"
-          subtitle="See nearby emergency requests and accept responder missions."
-          icon="people-circle"
-          colors={[theme.green, theme.teal]}
+          title="I Can Help"
+          subtitle="Respond to requests from people in need nearby"
+          icon="hand-left"
+          colors={["#218BE6", "#174EA6"]}
           onPress={() => navigation.navigate("HelperTabs")}
         />
+        <View style={styles.homeStatsCard}>
+          <HomeStat icon="people" value="2,841" label="Helpers" />
+          <HomeStat icon="checkmark-done-circle" value="14,920" label="Missions" />
+          <HomeStat icon="navigate" value="50 mi" label="Coverage" />
+        </View>
       </View>
     </Screen>
   );
@@ -180,6 +186,16 @@ function ModeCard({
         <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.75)" />
       </LinearGradient>
     </Pressable>
+  );
+}
+
+function HomeStat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string }) {
+  return (
+    <View style={styles.homeStat}>
+      <Ionicons name={icon} size={17} color={theme.teal} />
+      <Text style={styles.homeStatValue}>{value}</Text>
+      <Text style={styles.homeStatLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -502,7 +518,7 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: theme.cream,
+    backgroundColor: "#FFFDF9",
   },
   scroll: {
     paddingBottom: 28,
@@ -569,35 +585,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
   },
-  modeContent: {
+  homeContent: {
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    gap: 16,
+    paddingHorizontal: 22,
+    paddingTop: 56,
+    alignItems: "center",
   },
-  modeTitle: {
-    color: theme.text,
-    fontSize: 25,
-    fontWeight: "900",
-    lineHeight: 31,
-    marginBottom: 6,
+  homeLogo: {
+    width: 104,
+    height: 104,
+    resizeMode: "contain",
+    marginBottom: 30,
+  },
+  homeTitle: {
+    color: "#2D3748",
+    fontSize: 21,
+    fontWeight: "500",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  homeSubtitle: {
+    color: "#8B97A8",
+    fontSize: 13,
+    fontWeight: "500",
+    textAlign: "center",
+    marginBottom: 28,
   },
   modeCardPress: {
-    borderRadius: 24,
+    width: "100%",
+    borderRadius: 20,
+    marginBottom: 14,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
   modeCard: {
-    minHeight: 142,
-    borderRadius: 24,
-    padding: 20,
+    minHeight: 104,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 16,
   },
   modeIcon: {
-    width: 62,
-    height: 62,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.22)",
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -606,15 +643,48 @@ const styles = StyleSheet.create({
   },
   modeCardTitle: {
     color: "#fff",
-    fontSize: 21,
-    fontWeight: "900",
+    fontSize: 20,
+    fontWeight: "800",
   },
   modeCardSub: {
-    color: "rgba(255,255,255,0.82)",
-    fontSize: 13,
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 17,
+    marginTop: 5,
+  },
+  homeStatsCard: {
+    width: "100%",
+    minHeight: 92,
+    marginTop: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(17, 24, 39, 0.06)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.13,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  homeStat: {
+    flex: 1,
+    alignItems: "center",
+  },
+  homeStatValue: {
+    color: "#2D3748",
+    fontSize: 14,
     fontWeight: "700",
-    lineHeight: 19,
-    marginTop: 6,
+    marginTop: 5,
+  },
+  homeStatLabel: {
+    color: "#718096",
+    fontSize: 10,
+    fontWeight: "500",
+    marginTop: 3,
   },
   pressed: {
     opacity: 0.82,
