@@ -927,14 +927,57 @@ export default function App() {
 }
 
 function StartupScreen() {
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(logoAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 55,
+        useNativeDriver: true,
+      }),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+      ),
+    ]).start();
+  }, [logoAnim, pulseAnim]);
+
+  const logoScale = logoAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.82, 1],
+  });
+  const pulseScale = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.78, 1.25],
+  });
+  const pulseOpacity = pulseAnim.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [0.22, 0.1, 0],
+  });
+
   return (
     <SafeAreaView style={styles.startupScreen}>
       <StatusBar style="dark" />
-      <View style={styles.startupLogoShell}>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.startupPulse, { opacity: pulseOpacity, transform: [{ scale: pulseScale }] }]}
+      />
+      <Animated.View style={[styles.startupLogoShell, { opacity: logoAnim, transform: [{ scale: logoScale }] }]}>
         <Image source={responcitySplash} style={styles.startupLogo} />
-      </View>
-      <Text style={styles.startupTitle}>Responcity</Text>
-      <Text style={styles.startupTagline}>Help is just a tap away</Text>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -946,6 +989,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,
+  },
+  startupPulse: {
+    position: "absolute",
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    backgroundColor: "rgba(22, 82, 183, 0.16)",
   },
   startupLogoShell: {
     width: 188,
@@ -959,18 +1009,6 @@ const styles = StyleSheet.create({
     width: 170,
     height: 170,
     resizeMode: "contain",
-  },
-  startupTitle: {
-    color: "#192238",
-    fontSize: 30,
-    fontWeight: "900",
-    marginTop: 28,
-  },
-  startupTagline: {
-    color: "#7A8798",
-    fontSize: 14,
-    fontWeight: "700",
-    marginTop: 8,
   },
   safe: {
     flex: 1,
