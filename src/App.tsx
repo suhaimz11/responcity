@@ -1148,6 +1148,7 @@ function SafeCheckIn({ onBack, onSOSTrigger }: { onBack: () => void; onSOSTrigge
   const DURATION = 60;
   const [timeLeft, setTimeLeft] = useState(DURATION);
   const [phase, setPhase] = useState<"counting" | "safe" | "triggered">("counting");
+  const [triggeredDone, setTriggeredDone] = useState(false);
 
   useEffect(() => {
     if (phase !== "counting") return;
@@ -1162,6 +1163,15 @@ function SafeCheckIn({ onBack, onSOSTrigger }: { onBack: () => void; onSOSTrigge
     return () => clearTimeout(t);
   }, [phase, onBack]);
 
+  useEffect(() => {
+    if (phase !== "triggered") {
+      setTriggeredDone(false);
+      return;
+    }
+    const t = setTimeout(() => setTriggeredDone(true), 1700);
+    return () => clearTimeout(t);
+  }, [phase]);
+
   const r = 88;
   const circumference = 2 * Math.PI * r;
   const pct = timeLeft / DURATION;
@@ -1170,6 +1180,24 @@ function SafeCheckIn({ onBack, onSOSTrigger }: { onBack: () => void; onSOSTrigge
   const secs = timeLeft % 60;
   const timeStr = `0:${secs.toString().padStart(2, "0")}`;
   const headerGrad = urgency === "red" ? "linear-gradient(135deg,#FF1744,#C62828)" : urgency === "amber" ? "linear-gradient(135deg,#FF8F00,#E65100)" : "linear-gradient(135deg,#43A047,#00897B)";
+
+  if (phase === "triggered") return (
+    <div style={{ minHeight: "100vh", background: "#F40012", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito',sans-serif", animation: "fadeIn 0.3s ease", position: "relative", overflow: "hidden", padding: "0 28px" }}>
+      <div style={{ position: "absolute", width: 190, height: 190, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.72)", background: "rgba(255,255,255,0.16)", animation: "sosWave 0.76s ease-out infinite" }} />
+      <div style={{ position: "absolute", width: 138, height: 138, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.58)", background: "rgba(255,255,255,0.12)", animation: "sosWave 0.76s 0.18s ease-out infinite" }} />
+      <div style={{ width: 116, height: 116, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56, color: "#fff", animation: "sosIconPop 0.62s ease both", zIndex: 1 }}>
+        {triggeredDone ? "!" : "⌁"}
+      </div>
+      <div style={{ fontSize: 27, fontWeight: 900, color: "#fff", marginTop: 30, textAlign: "center", zIndex: 1 }}>
+        {triggeredDone ? "SOS Triggered!" : "Sending SOS..."}
+      </div>
+      <div style={{ fontSize: 14, color: "rgba(255,255,255,0.92)", fontWeight: 800, marginTop: 16, textAlign: "center", lineHeight: 1.55, maxWidth: 320, zIndex: 1 }}>
+        {triggeredDone
+          ? "Buddy helpers and emergency contacts are being notified now."
+          : "Sharing your live location with selected buddies and emergency contacts."}
+      </div>
+    </div>
+  );
 
   if (phase === "safe") return (
     <div style={{ minHeight: "100vh", background: "#E8F5E9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito',sans-serif" }}>
@@ -3176,6 +3204,8 @@ export default function App() {
         @keyframes progBar   { from{width:100%} to{width:0%} }
         @keyframes blink     { 0%,100%{opacity:1} 50%{opacity:0.2} }
         @keyframes urgentGlow{ 0%,100%{box-shadow:0 0 0 0 rgba(255,23,68,0.5)} 50%{box-shadow:0 0 0 8px rgba(255,23,68,0)} }
+        @keyframes sosWave   { 0%{transform:scale(0.72);opacity:0.55} 100%{transform:scale(2.35);opacity:0} }
+        @keyframes sosIconPop{ 0%{transform:scale(0.72);opacity:0} 68%{transform:scale(1.08);opacity:1} 100%{transform:scale(1);opacity:1} }
 
         .press:active { transform:scale(0.95) !important; transition:transform 0.1s !important; }
 

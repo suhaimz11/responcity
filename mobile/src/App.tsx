@@ -48,7 +48,7 @@ type Request = {
   urgent: boolean;
 };
 
-type CheckInStatus = "locked" | "ready" | "active" | "review" | "thanks";
+type CheckInStatus = "locked" | "ready" | "active" | "sos" | "review" | "thanks";
 
 type EmergencySession = {
   unlocked: boolean;
@@ -730,6 +730,9 @@ function SafeCheckIn({
 }) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [sosAnimationDone, setSosAnimationDone] = useState(false);
+  const sosPulse = useRef(new Animated.Value(0)).current;
+  const sosIconScale = useRef(new Animated.Value(0.72)).current;
 
   useEffect(() => {
     if (session.status !== "active" || !session.startedAt) return;
@@ -742,6 +745,44 @@ function SafeCheckIn({
     }, 1000);
     return () => clearInterval(timer);
   }, [session.status, session.startedAt, setSession]);
+
+  useEffect(() => {
+    if (session.status !== "sos") {
+      setSosAnimationDone(false);
+      sosPulse.setValue(0);
+      sosIconScale.setValue(0.72);
+      return;
+    }
+
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sosPulse, {
+          toValue: 1,
+          duration: 760,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sosPulse, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    Animated.spring(sosIconScale, {
+      toValue: 1,
+      friction: 5,
+      tension: 90,
+      useNativeDriver: true,
+    }).start();
+    pulseLoop.start();
+
+    const doneTimer = setTimeout(() => setSosAnimationDone(true), 1700);
+    return () => {
+      pulseLoop.stop();
+      clearTimeout(doneTimer);
+    };
+  }, [session.status, sosIconScale, sosPulse]);
 
   function startSession() {
     setSession(current => ({
@@ -757,6 +798,8 @@ function SafeCheckIn({
   }
 
   function triggerSos() {
+    setSession(current => ({ ...current, status: "sos" }));
+    setSosAnimationDone(false);
     Alert.alert("SOS triggered", "Emergency contacts and selected buddies were alerted with your live location.");
   }
 
@@ -851,6 +894,35 @@ function SafeCheckIn({
             <Text style={styles.skipReview}>Skip for now</Text>
           </Pressable>
         </ScrollView>
+      </Screen>
+    );
+  }
+
+  if (session.status === "sos") {
+    const pulseScale = sosPulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.82, 2.4],
+    });
+    const pulseOpacity = sosPulse.interpolate({
+      inputRange: [0, 0.65, 1],
+      outputRange: [0.42, 0.18, 0],
+    });
+
+    return (
+      <Screen>
+        <View style={styles.sosTriggeredScreen}>
+          <Animated.View pointerEvents="none" style={[styles.sosPulseRing, { opacity: pulseOpacity, transform: [{ scale: pulseScale }] }]} />
+          <Animated.View pointerEvents="none" style={[styles.sosPulseRing, styles.sosPulseRingDelay, { opacity: pulseOpacity, transform: [{ scale: pulseScale }] }]} />
+          <Animated.View style={[styles.sosTriggeredIcon, { transform: [{ scale: sosIconScale }] }]}>
+            <Ionicons name={sosAnimationDone ? "warning-outline" : "radio"} size={58} color="#fff" />
+          </Animated.View>
+          <Text style={styles.sosTriggeredTitle}>{sosAnimationDone ? "SOS Triggered!" : "Sending SOS..."}</Text>
+          <Text style={styles.sosTriggeredSub}>
+            {sosAnimationDone
+              ? "Buddy helpers and emergency contacts are being notified now."
+              : "Sharing your live location with selected buddies and emergency contacts."}
+          </Text>
+        </View>
       </Screen>
     );
   }
@@ -2387,6 +2459,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     marginTop: 22,
+  },
+  sosTriggeredScreen: {
+    flex: 1,
+    backgroundColor: "#F40012",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    overflow: "hidden",
+  },
+  sosPulseRing: {
+    position: "absolute",
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.72)",
+    backgroundColor: "rgba(255,255,255,0.16)",
+  },
+  sosPulseRingDelay: {
+    width: 138,
+    height: 138,
+    borderRadius: 69,
+    borderColor: "rgba(255,255,255,0.58)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  sosTriggeredIcon: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.5)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sosTriggeredTitle: {
+    color: "#fff",
+    fontSize: 27,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 30,
+  },
+  sosTriggeredSub: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 21,
+    textAlign: "center",
+    marginTop: 16,
+    maxWidth: 320,
   },
   infoCard: {
     marginHorizontal: 20,
