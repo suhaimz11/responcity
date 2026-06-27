@@ -48,6 +48,17 @@ type Request = {
   urgent: boolean;
 };
 
+type CheckInStatus = "locked" | "ready" | "active" | "review" | "thanks";
+
+type EmergencySession = {
+  unlocked: boolean;
+  buddiesNotified: boolean;
+  buddyCount: number;
+  startedAt?: number;
+  elapsedSeconds: number;
+  status: CheckInStatus;
+};
+
 type LegalSection = {
   title: string;
   body: string[];
@@ -110,6 +121,14 @@ const nearbyRequests: Request[] = [
     urgent: false,
   },
 ];
+
+const defaultEmergencySession: EmergencySession = {
+  unlocked: false,
+  buddiesNotified: false,
+  buddyCount: 2,
+  elapsedSeconds: 0,
+  status: "locked",
+};
 
 const aboutSections: LegalSection[] = [
   {
@@ -356,15 +375,33 @@ function HomeStat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap
 }
 
 function RequesterTabs({ navigation }: any) {
+  const [session, setSession] = useState<EmergencySession>(defaultEmergencySession);
+
+  function unlockCheckIn() {
+    setSession({
+      unlocked: true,
+      buddiesNotified: true,
+      buddyCount: 2,
+      elapsedSeconds: 0,
+      status: "ready",
+    });
+    Alert.alert("Buddies notified", "Your selected buddies were alerted immediately and can trace your live session.");
+  }
+
   return (
     <Tab.Navigator screenOptions={tabOptions}>
       <Tab.Screen
         name="Home"
-        component={RequesterHome}
-        initialParams={{ rootNavigation: navigation }}
         options={{ tabBarIcon: tabIcon("home") }}
-      />
-      <Tab.Screen name="Check In" component={MedicalProfile} options={{ tabBarIcon: tabIcon("checkmark-circle") }} />
+      >
+        {props => <RequesterHome {...props} rootNavigation={navigation} onEmergencyRequest={unlockCheckIn} />}
+      </Tab.Screen>
+      <Tab.Screen
+        name="Check In"
+        options={{ tabBarIcon: tabIcon("checkmark-circle") }}
+      >
+        {props => <SafeCheckIn {...props} session={session} setSession={setSession} />}
+      </Tab.Screen>
       <Tab.Screen name="History" component={EmergencyContacts} options={{ tabBarIcon: tabIcon("time") }} />
     </Tab.Navigator>
   );
@@ -412,9 +449,9 @@ const tabOptions = {
   },
 };
 
-function RequesterHome({ navigation, route }: any) {
+function RequesterHome({ navigation, route, rootNavigation: providedRootNavigation, onEmergencyRequest }: any) {
   const [locationStatus, setLocationStatus] = useState("Location not shared yet");
-  const rootNavigation = route.params?.rootNavigation ?? navigation;
+  const rootNavigation = providedRootNavigation ?? route.params?.rootNavigation ?? navigation;
   const radarPulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -458,7 +495,8 @@ function RequesterHome({ navigation, route }: any) {
 
   async function sendSos() {
     await requestLocation();
-    rootNavigation.navigate("Timeline");
+    onEmergencyRequest?.();
+    navigation.navigate("Check In");
   }
 
   return (
@@ -519,7 +557,7 @@ function RequesterHome({ navigation, route }: any) {
                 pressed && styles.categoryPressed,
               ]}
               onPress={() => {
-                rootNavigation.navigate("RequestDetails", { categoryId: cat.id });
+                rootNavigation.navigate("RequestDetails", { categoryId: cat.id, unlockCheckIn: onEmergencyRequest });
               }}
             >
               <Ionicons name={cat.icon} size={25} color={cat.color} />
@@ -611,7 +649,10 @@ function RequestDetailsScreen({ navigation, route }: any) {
               pressed && confirmed && description.trim().length > 0 && styles.pressed,
             ]}
             disabled={!confirmed || description.trim().length === 0}
-            onPress={() => navigation.navigate("Timeline")}
+            onPress={() => {
+              route.params?.unlockCheckIn?.();
+              navigation.navigate("RequesterTabs", { screen: "Check In" });
+            }}
           >
             <Ionicons name="send" size={18} color="#fff" />
             <Text style={styles.requestHelpButtonText}>Request Help</Text>
@@ -680,16 +721,196 @@ function TimelineScreen({ navigation }: any) {
   );
 }
 
-function MedicalProfile() {
+function SafeCheckIn({
+  session,
+  setSession,
+}: {
+  session: EmergencySession;
+  setSession: React.Dispatch<React.SetStateAction<EmergencySession>>;
+}) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+
+  useEffect(() => {
+    if (session.status !== "active" || !session.startedAt) return;
+    const timer = setInterval(() => {
+      setSession(current =>
+        current.status === "active" && current.startedAt
+          ? { ...current, elapsedSeconds: Math.max(0, Math.floor((Date.now() - current.startedAt) / 1000)) }
+          : current,
+      );
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [session.status, session.startedAt, setSession]);
+
+  function startSession() {
+    setSession(current => ({
+      ...current,
+      status: "active",
+      startedAt: Date.now(),
+      elapsedSeconds: 0,
+    }));
+  }
+
+  function endSession() {
+    setSession(current => ({ ...current, status: "review" }));
+  }
+
+  function triggerSos() {
+    Alert.alert("SOS triggered", "Emergency contacts and selected buddies were alerted with your live location.");
+  }
+
+  function submitReview() {
+    setSession(current => ({ ...current, status: "thanks" }));
+    setRating(0);
+    setComment("");
+  }
+
+  if (!session.unlocked || session.status === "locked") {
+    return (
+      <Screen>
+        <View style={styles.checkInCenter}>
+          <View style={styles.checkIconSoft}>
+            <Ionicons name="lock-closed" size={34} color="#1652B7" />
+          </View>
+          <Text style={styles.checkTitle}>Safe Check-In locked</Text>
+          <Text style={styles.checkSub}>
+            Send an emergency request first. Once your selected buddies are notified, this page becomes available for live tracing.
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (session.status === "active") {
+    return (
+      <Screen>
+        <View style={styles.activeHeader}>
+          <Text style={styles.activeEyebrow}>● SESSION ACTIVE</Text>
+          <Text style={styles.activeTitle}>You're being monitored</Text>
+          <Text style={styles.activeSub}>End the session when you're safe</Text>
+        </View>
+        <View style={styles.checkBody}>
+          <View style={styles.timerCard}>
+            <Text style={styles.timerLabel}>SESSION TIME</Text>
+            <Text style={styles.timerValue}>{formatElapsed(session.elapsedSeconds)}</Text>
+            <Text style={styles.timerCaption}>minutes elapsed</Text>
+          </View>
+          <View style={styles.buddyNotice}>
+            <Ionicons name="people" size={18} color="#2E7D32" />
+            <Text style={styles.buddyNoticeText}>{session.buddyCount} buddies are watching your session</Text>
+          </View>
+          <Pressable style={[styles.checkAction, styles.safeEndAction]} onPress={endSession}>
+            <Ionicons name="shield-checkmark" size={19} color="#fff" />
+            <Text style={styles.checkActionText}>I'm Safe - End Session</Text>
+          </Pressable>
+          <Pressable style={[styles.checkAction, styles.sosAction]} onPress={triggerSos}>
+            <Ionicons name="warning" size={19} color="#fff" />
+            <Text style={styles.checkActionText}>EMERGENCY - Trigger SOS</Text>
+          </Pressable>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (session.status === "review") {
+    return (
+      <Screen>
+        <ScrollView contentContainerStyle={styles.checkReview}>
+          <View style={styles.checkIconSuccess}>
+            <Ionicons name="shield-checkmark" size={34} color={theme.green} />
+          </View>
+          <Text style={styles.checkTitle}>Session Complete!</Text>
+          <Text style={styles.checkSub}>Session lasted {formatElapsed(session.elapsedSeconds)}. How would you rate your experience with Responcity?</Text>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewTitle}>Rate your overall experience</Text>
+            <View style={styles.ratingRow}>
+              {[1, 2, 3, 4, 5].map(value => (
+                <Pressable key={value} onPress={() => setRating(value)}>
+                  <Ionicons name={rating >= value ? "person" : "person-outline"} size={30} color={rating >= value ? theme.green : "#9CA3AF"} />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewTitle}>Leave a comment (optional)</Text>
+            <TextInput
+              value={comment}
+              onChangeText={setComment}
+              multiline
+              placeholder="Tell us how it went..."
+              placeholderTextColor="#8B95A1"
+              style={styles.reviewInput}
+            />
+          </View>
+          <Pressable style={[styles.submitReviewButton, rating === 0 && styles.submitReviewDisabled]} disabled={rating === 0} onPress={submitReview}>
+            <Ionicons name="send" size={18} color="#fff" />
+            <Text style={styles.submitReviewText}>Submit Review</Text>
+          </Pressable>
+          <Pressable onPress={submitReview}>
+            <Text style={styles.skipReview}>Skip for now</Text>
+          </Pressable>
+        </ScrollView>
+      </Screen>
+    );
+  }
+
+  if (session.status === "thanks") {
+    return (
+      <Screen>
+        <View style={styles.checkInCenter}>
+          <Ionicons name="shield-checkmark" size={54} color={theme.green} />
+          <Text style={[styles.checkTitle, { color: "#2E7D32" }]}>Thank you!</Text>
+          <Text style={[styles.checkSub, { color: "#2E7D32" }]}>Your review has been submitted. Stay safe!</Text>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <BrandHeader mode="Medical profile" />
-        <InfoCard title="Profile" lines={["Name: Demo User", "Blood group: O+", "Allergies: Penicillin", "Emergency note: Asthma inhaler in bag"]} />
-        <InfoCard title="Responder visibility" lines={["Shared only after SOS", "Includes live location", "Can be expanded with Firebase later"]} />
+      <ScrollView contentContainerStyle={styles.checkIntro}>
+        <View style={styles.checkIconSoft}>
+          <Ionicons name="shield-checkmark" size={38} color="#1652B7" />
+        </View>
+        <Text style={styles.checkTitle}>Safe Check-In</Text>
+        <Text style={styles.checkSub}>
+          Activate before meeting someone new or entering an unfamiliar place. Your session stays active until you end it. If you trigger SOS, your buddies and emergency contacts are alerted instantly.
+        </Text>
+        {session.buddiesNotified ? (
+          <View style={styles.buddyNotice}>
+            <Ionicons name="notifications" size={18} color="#2E7D32" />
+            <Text style={styles.buddyNoticeText}>{session.buddyCount} selected buddies notified and ready to trace you</Text>
+          </View>
+        ) : null}
+        <Pressable style={styles.startCheckButton} onPress={startSession}>
+          <Ionicons name="shield-checkmark" size={19} color="#fff" />
+          <Text style={styles.startCheckText}>Start Safe Check-In</Text>
+        </Pressable>
+        <View style={styles.howItWorksCard}>
+          <Text style={styles.howItWorksTitle}>HOW IT WORKS</Text>
+          {[
+            "Session runs until you manually end it",
+            "No auto-trigger - you stay in control",
+            "Buddy helpers are notified only if you press SOS",
+            "Emergency contacts alerted on SOS",
+            "Rate your experience when the mission ends",
+          ].map((line, index) => (
+            <View key={line} style={styles.howRow}>
+              <Ionicons name={index < 2 ? "shield-checkmark-outline" : index < 4 ? "warning-outline" : "star-outline"} size={16} color={index < 2 ? theme.green : index < 4 ? theme.red : "#7C4DFF"} />
+              <Text style={styles.howText}>{line}</Text>
+            </View>
+          ))}
+        </View>
       </ScrollView>
     </Screen>
   );
+}
+
+function formatElapsed(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function EmergencyContacts() {
@@ -1903,6 +2124,269 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "900",
+  },
+  checkIntro: {
+    paddingHorizontal: 22,
+    paddingTop: 54,
+    paddingBottom: 34,
+    alignItems: "center",
+  },
+  checkInCenter: {
+    flex: 1,
+    paddingHorizontal: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkIconSoft: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "#EAF2F8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 26,
+  },
+  checkIconSuccess: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: "#EAF8ED",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  checkTitle: {
+    color: "#2D3748",
+    fontSize: 31,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  checkSub: {
+    color: "#7A8798",
+    fontSize: 15,
+    fontWeight: "600",
+    lineHeight: 24,
+    textAlign: "center",
+    marginTop: 16,
+  },
+  startCheckButton: {
+    width: "100%",
+    minHeight: 88,
+    borderRadius: 18,
+    backgroundColor: "#2F6FBA",
+    marginTop: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: "#1652B7",
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 9 },
+    elevation: 5,
+  },
+  startCheckText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  howItWorksCard: {
+    width: "100%",
+    marginTop: 32,
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+  },
+  howItWorksTitle: {
+    color: "#7A8798",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    marginBottom: 16,
+  },
+  howRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 17,
+  },
+  howText: {
+    flex: 1,
+    color: "#4B5563",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  activeHeader: {
+    backgroundColor: "#165FBA",
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingHorizontal: 28,
+    paddingTop: 28,
+    paddingBottom: 32,
+    alignItems: "center",
+  },
+  activeEyebrow: {
+    color: "#63D96A",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
+  activeTitle: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "900",
+  },
+  activeSub: {
+    color: "rgba(255,255,255,0.84)",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 7,
+  },
+  checkBody: {
+    paddingHorizontal: 24,
+    paddingTop: 94,
+    paddingBottom: 26,
+  },
+  timerCard: {
+    minHeight: 218,
+    borderRadius: 22,
+    borderWidth: 1.2,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#14213D",
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  timerLabel: {
+    color: "#9CA3AF",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.3,
+  },
+  timerValue: {
+    color: "#165FBA",
+    fontSize: 66,
+    fontWeight: "800",
+    marginTop: 12,
+  },
+  timerCaption: {
+    color: "#7A8798",
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 6,
+  },
+  buddyNotice: {
+    width: "100%",
+    minHeight: 58,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "#B9E3C0",
+    backgroundColor: "#EFFBEF",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    marginTop: 18,
+  },
+  buddyNoticeText: {
+    flex: 1,
+    color: "#215C2A",
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 18,
+  },
+  checkAction: {
+    minHeight: 72,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    marginTop: 18,
+  },
+  safeEndAction: {
+    backgroundColor: "#2DBB2D",
+  },
+  sosAction: {
+    backgroundColor: "#FF1744",
+  },
+  checkActionText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  checkReview: {
+    paddingHorizontal: 22,
+    paddingTop: 54,
+    paddingBottom: 34,
+    alignItems: "center",
+  },
+  reviewCard: {
+    width: "100%",
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#fff",
+    padding: 20,
+    marginTop: 24,
+  },
+  reviewTitle: {
+    color: "#4B5563",
+    fontSize: 17,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  ratingRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 16,
+    marginTop: 24,
+  },
+  reviewInput: {
+    minHeight: 126,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#F8FAFC",
+    padding: 14,
+    color: "#1F2937",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlignVertical: "top",
+    marginTop: 18,
+  },
+  submitReviewButton: {
+    width: "100%",
+    minHeight: 64,
+    borderRadius: 16,
+    backgroundColor: "#2F6FBA",
+    marginTop: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+  },
+  submitReviewDisabled: {
+    backgroundColor: "#CBD5E1",
+  },
+  submitReviewText: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  skipReview: {
+    color: "#64748B",
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 22,
   },
   infoCard: {
     marginHorizontal: 20,
