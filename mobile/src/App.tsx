@@ -72,6 +72,26 @@ type ProofAsset = {
   uri?: string;
 };
 
+type MissionHistoryItem = {
+  id: string;
+  category: string;
+  title: string;
+  date: string;
+  distanceKm: number;
+  points: number;
+};
+
+type PersonalActivityItem = {
+  id: string;
+  type: "sos" | "checkin" | "request" | "review";
+  title: string;
+  detail: string;
+  date: string;
+  status: "completed" | "active" | "cancelled";
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+};
+
 type LegalSection = {
   title: string;
   body: string[];
@@ -133,6 +153,108 @@ const nearbyRequests: Request[] = [
     distance: "1.1 km",
     eta: "7 min",
     urgent: false,
+  },
+];
+
+const nearbyMissionHistory: MissionHistoryItem[] = [
+  {
+    id: "m1",
+    category: "medical",
+    title: "Assisted neighbor with diabetic emergency",
+    date: "Dec 15",
+    distanceKm: 0.7,
+    points: 50,
+  },
+  {
+    id: "m2",
+    category: "transport",
+    title: "Changed flat tyre for stranded family",
+    date: "Dec 12",
+    distanceKm: 1.8,
+    points: 30,
+  },
+  {
+    id: "m3",
+    category: "home",
+    title: "Helped elderly resident during power outage",
+    date: "Dec 10",
+    distanceKm: 3.2,
+    points: 25,
+  },
+  {
+    id: "m4",
+    category: "safety",
+    title: "Escorted neighbor safely to parking garage",
+    date: "Dec 7",
+    distanceKm: 4.6,
+    points: 40,
+  },
+  {
+    id: "m5",
+    category: "mental",
+    title: "Provided emotional support during panic episode",
+    date: "Dec 3",
+    distanceKm: 5.5,
+    points: 35,
+  },
+  {
+    id: "m6",
+    category: "blood",
+    title: "Connected O+ donor to nearby hospital",
+    date: "Nov 29",
+    distanceKm: 8.4,
+    points: 45,
+  },
+  {
+    id: "m7",
+    category: "lost-found",
+    title: "Returned lost pet to owner",
+    date: "Nov 24",
+    distanceKm: 12.8,
+    points: 20,
+  },
+];
+
+const personalActivity: PersonalActivityItem[] = [
+  {
+    id: "a1",
+    type: "checkin",
+    title: "Safe Check-In completed",
+    detail: "Session ended safely. Buddies were notified.",
+    date: "Today",
+    status: "completed",
+    icon: "shield-checkmark",
+    color: theme.green,
+  },
+  {
+    id: "a2",
+    type: "request",
+    title: "Medical request sent",
+    detail: "Chest pain or breathing trouble - responders alerted.",
+    date: "Yesterday",
+    status: "completed",
+    icon: "medical",
+    color: theme.red,
+  },
+  {
+    id: "a3",
+    type: "sos",
+    title: "SOS triggered",
+    detail: "Emergency contacts and buddies received your live location.",
+    date: "Dec 12",
+    status: "completed",
+    icon: "warning",
+    color: "#E11D48",
+  },
+  {
+    id: "a4",
+    type: "review",
+    title: "Review submitted",
+    detail: "You rated your completed check-in experience.",
+    date: "Dec 10",
+    status: "completed",
+    icon: "star",
+    color: "#F59E0B",
   },
 ];
 
@@ -492,7 +614,7 @@ function RequesterTabs({ navigation, route }: any) {
       >
         {props => <SafeCheckIn {...props} session={session} setSession={setSession} />}
       </Tab.Screen>
-      <Tab.Screen name="History" component={EmergencyContacts} options={{ tabBarIcon: tabIcon("time") }} />
+      <Tab.Screen name="Activity" component={MyActivityScreen} options={{ tabBarIcon: tabIcon("pulse") }} />
     </Tab.Navigator>
   );
 }
@@ -542,6 +664,7 @@ const tabOptions = {
 function RequesterHome({ navigation, route, rootNavigation: providedRootNavigation, onEmergencyRequest }: any) {
   const [locationStatus, setLocationStatus] = useState("Location not shared yet");
   const [sosLaunching, setSosLaunching] = useState(false);
+  const [nearbyRadiusKm, setNearbyRadiusKm] = useState(5);
   const rootNavigation = providedRootNavigation ?? route.params?.rootNavigation ?? navigation;
   const radarPulse = useRef(new Animated.Value(0)).current;
   const launchPulse = useRef(new Animated.Value(0)).current;
@@ -637,6 +760,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
     inputRange: [0, 0.62, 1],
     outputRange: [0.42, 0.18, 0],
   });
+  const homeNearbyMissions = nearbyMissionHistory.filter(mission => mission.distanceKm <= nearbyRadiusKm);
 
   return (
     <Screen>
@@ -719,6 +843,12 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
             </Pressable>
           ))}
         </View>
+
+        <NearbyActivityPreview
+          radiusKm={nearbyRadiusKm}
+          onRadiusChange={setNearbyRadiusKm}
+          missions={homeNearbyMissions}
+        />
 
         <Text style={styles.buddiesTitle}>My Buddies</Text>
         <View style={styles.buddyCard}>
@@ -836,17 +966,6 @@ function RequestDetailsScreen({ navigation, route }: any) {
 
   return (
     <Screen>
-      {requestLaunching ? (
-        <View style={styles.sosLaunchOverlay}>
-          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
-          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, styles.sosLaunchRingSmall, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
-          <Animated.View style={[styles.sosLaunchIcon, { transform: [{ scale: requestLaunchIconScale }] }]}>
-            <Ionicons name="radio" size={58} color="#fff" />
-          </Animated.View>
-          <Text style={styles.sosLaunchTitle}>Sending SOS...</Text>
-          <Text style={styles.sosLaunchSub}>Notifying your selected buddies and preparing Safe Check-In.</Text>
-        </View>
-      ) : null}
       <ScrollView contentContainerStyle={styles.detailScroll}>
         <RequesterHeader onSwitch={() => navigation.navigate("Mode")} />
         <View style={styles.detailSheet}>
@@ -972,14 +1091,28 @@ function RequestDetailsScreen({ navigation, route }: any) {
           <Pressable
             style={({ pressed }) => [
               styles.requestHelpButton,
+              requestLaunching && styles.requestHelpButtonLaunching,
               !canSubmit && styles.requestHelpButtonDisabled,
               pressed && canSubmit && styles.pressed,
             ]}
-            disabled={!canSubmit}
+            disabled={!canSubmit || requestLaunching}
             onPress={submitRequest}
           >
-            <Ionicons name="send" size={18} color="#fff" />
-            <Text style={styles.requestHelpButtonText}>Request Help</Text>
+            {requestLaunching ? (
+              <>
+                <Animated.View pointerEvents="none" style={[styles.requestButtonLaunchRing, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
+                <Animated.View pointerEvents="none" style={[styles.requestButtonLaunchRing, styles.requestButtonLaunchRingSmall, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
+                <Animated.View style={[styles.requestLaunchingContent, { transform: [{ scale: requestLaunchIconScale }] }]}>
+                  <Ionicons name="radio" size={20} color="#fff" />
+                  <Text style={styles.requestHelpButtonText}>Sending SOS...</Text>
+                </Animated.View>
+              </>
+            ) : (
+              <>
+                <Ionicons name="send" size={18} color="#fff" />
+                <Text style={styles.requestHelpButtonText}>Request Help</Text>
+              </>
+            )}
           </Pressable>
         </View>
       </ScrollView>
@@ -1337,6 +1470,139 @@ function EmergencyContacts() {
         <InfoCard title="Official escalation" lines={["India emergency: 112", "Ambulance: 108", "Auto-escalates if no responder accepts"]} />
       </ScrollView>
     </Screen>
+  );
+}
+
+function MyActivityScreen() {
+  const completedCount = personalActivity.filter(item => item.status === "completed").length;
+  const sosCount = personalActivity.filter(item => item.type === "sos").length;
+  const checkInCount = personalActivity.filter(item => item.type === "checkin").length;
+
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={styles.activityScroll}>
+        <Text style={styles.activityTitle}>My Activity</Text>
+        <View style={styles.activityStatsCard}>
+          <ActivityStat icon="checkmark-done" value={String(completedCount)} label="Completed" color={theme.green} />
+          <ActivityStat icon="warning" value={String(sosCount)} label="SOS" color={theme.red} />
+          <ActivityStat icon="shield-checkmark" value={String(checkInCount)} label="Check-Ins" color="#1652B7" />
+        </View>
+
+        <View style={styles.activitySectionHeader}>
+          <Text style={styles.activitySectionTitle}>Personal History</Text>
+          <Text style={styles.activitySectionMeta}>Private</Text>
+        </View>
+
+        {personalActivity.map(item => <PersonalActivityCard key={item.id} item={item} />)}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+function NearbyActivityPreview({
+  radiusKm,
+  onRadiusChange,
+  missions,
+}: {
+  radiusKm: number;
+  onRadiusChange: (value: number) => void;
+  missions: MissionHistoryItem[];
+}) {
+  const radiusOptions = [1, 3, 5, 10, 25];
+
+  return (
+    <View style={styles.nearbyActivityWrap}>
+      <View style={styles.activitySectionHeader}>
+        <Text style={styles.activitySectionTitle}>Nearby Activity</Text>
+        <Text style={styles.activitySectionMeta}>{missions.length} within {radiusKm} km</Text>
+      </View>
+      <View style={styles.radiusCard}>
+        <View style={styles.radiusHeader}>
+          <View>
+            <Text style={styles.radiusTitle}>Community radius</Text>
+            <Text style={styles.radiusSub}>Anonymized missions near you</Text>
+          </View>
+          <View style={styles.radiusBadge}>
+            <Text style={styles.radiusBadgeText}>{radiusKm} km</Text>
+          </View>
+        </View>
+        <View style={styles.radiusOptions}>
+          {radiusOptions.map(option => (
+            <Pressable
+              key={option}
+              style={({ pressed }) => [
+                styles.radiusChip,
+                radiusKm === option && styles.radiusChipActive,
+                pressed && styles.categoryPressed,
+              ]}
+              onPress={() => onRadiusChange(option)}
+            >
+              <Text style={[styles.radiusChipText, radiusKm === option && styles.radiusChipTextActive]}>{option}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {missions.length > 0 ? (
+        missions.slice(0, 3).map(mission => <MissionHistoryCard key={mission.id} mission={mission} compact />)
+      ) : (
+        <View style={styles.emptyHistoryCard}>
+          <Ionicons name="map-outline" size={28} color="#94A3B8" />
+          <Text style={styles.emptyHistoryTitle}>No nearby activity</Text>
+          <Text style={styles.emptyHistorySub}>Increase the radius to see more anonymized community missions.</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function ActivityStat({ icon, value, label, color }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string; color: string }) {
+  return (
+    <View style={styles.activityStat}>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={styles.activityStatValue}>{value}</Text>
+      <Text style={styles.activityStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function PersonalActivityCard({ item }: { item: PersonalActivityItem }) {
+  return (
+    <View style={styles.personalActivityCard}>
+      <View style={[styles.personalActivityIcon, { backgroundColor: `${item.color}18` }]}>
+        <Ionicons name={item.icon} size={22} color={item.color} />
+      </View>
+      <View style={styles.personalActivityCopy}>
+        <Text style={styles.personalActivityTitle}>{item.title}</Text>
+        <Text style={styles.personalActivityDetail}>{item.detail}</Text>
+        <Text style={styles.personalActivityDate}>{item.date}</Text>
+      </View>
+      <View style={styles.personalStatusPill}>
+        <Text style={styles.personalStatusText}>{item.status}</Text>
+      </View>
+    </View>
+  );
+}
+
+function MissionHistoryCard({ mission, compact = false }: { mission: MissionHistoryItem; compact?: boolean }) {
+  const category = categoryFor(mission.category);
+  return (
+    <View style={[styles.missionHistoryCard, compact && styles.missionHistoryCardCompact]}>
+      <View style={[styles.missionHistoryIcon, { backgroundColor: category.bg }]}>
+        <Ionicons name={category.icon} size={22} color={category.color} />
+      </View>
+      <View style={styles.missionHistoryCopy}>
+        <Text style={[styles.missionHistoryCategory, { color: category.color }]}>{category.label.toUpperCase()}</Text>
+        <Text style={styles.missionHistoryTitle}>{mission.title}</Text>
+        <Text style={styles.missionHistoryMeta}>{mission.date} - {mission.distanceKm.toFixed(1)} km away</Text>
+      </View>
+      {!compact ? (
+        <View style={styles.pointsBadge}>
+          <Text style={styles.pointsValue}>+{mission.points}</Text>
+          <Text style={styles.pointsLabel}>pts</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -2793,6 +3059,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 7 },
     elevation: 4,
+    overflow: "hidden",
+  },
+  requestHelpButtonLaunching: {
+    backgroundColor: "#F40012",
   },
   requestHelpButtonDisabled: {
     backgroundColor: "#CBD5E1",
@@ -2803,6 +3073,28 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "900",
+  },
+  requestButtonLaunchRing: {
+    position: "absolute",
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.42)",
+  },
+  requestButtonLaunchRingSmall: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.34)",
+  },
+  requestLaunchingContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
   timelineHero: {
     margin: 20,
@@ -3193,6 +3485,282 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 20,
     marginTop: 4,
+  },
+  activityScroll: {
+    paddingHorizontal: 22,
+    paddingTop: 34,
+    paddingBottom: 34,
+  },
+  activityTitle: {
+    color: "#2D3748",
+    fontSize: 32,
+    fontWeight: "800",
+    marginBottom: 20,
+  },
+  activityStatsCard: {
+    minHeight: 128,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    shadowColor: "#14213D",
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  activityStat: {
+    flex: 1,
+    alignItems: "center",
+  },
+  activityStatValue: {
+    color: "#2D3748",
+    fontSize: 25,
+    fontWeight: "800",
+    marginTop: 9,
+  },
+  activityStatLabel: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+  radiusCard: {
+    marginTop: 18,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 16,
+  },
+  radiusHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  radiusTitle: {
+    color: "#2D3748",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  radiusSub: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  radiusBadge: {
+    minWidth: 58,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#EEF4FF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  radiusBadgeText: {
+    color: "#1652B7",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  radiusOptions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 15,
+  },
+  radiusChip: {
+    flex: 1,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#F8FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radiusChipActive: {
+    backgroundColor: "#1652B7",
+    borderColor: "#1652B7",
+  },
+  radiusChipText: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  radiusChipTextActive: {
+    color: "#FFFFFF",
+  },
+  activitySectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 26,
+    marginBottom: 12,
+  },
+  activitySectionTitle: {
+    color: "#2D3748",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  activitySectionMeta: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  nearbyActivityWrap: {
+    paddingHorizontal: 20,
+    marginTop: 6,
+  },
+  missionHistoryCard: {
+    minHeight: 112,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 12,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  missionHistoryCardCompact: {
+    minHeight: 94,
+    padding: 13,
+    marginBottom: 10,
+  },
+  missionHistoryIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  missionHistoryCopy: {
+    flex: 1,
+  },
+  missionHistoryCategory: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.7,
+    marginBottom: 4,
+  },
+  missionHistoryTitle: {
+    color: "#2D3748",
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 19,
+  },
+  missionHistoryMeta: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 5,
+  },
+  pointsBadge: {
+    width: 58,
+    minHeight: 58,
+    borderRadius: 16,
+    backgroundColor: "#FFF2D8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pointsValue: {
+    color: "#E86A2C",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  pointsLabel: {
+    color: "#B45309",
+    fontSize: 10,
+    fontWeight: "900",
+    marginTop: 1,
+  },
+  emptyHistoryCard: {
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 24,
+    alignItems: "center",
+  },
+  emptyHistoryTitle: {
+    color: "#334155",
+    fontSize: 15,
+    fontWeight: "900",
+    marginTop: 10,
+  },
+  emptyHistorySub: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 5,
+  },
+  personalActivityCard: {
+    minHeight: 112,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 13,
+    marginBottom: 12,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  personalActivityIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  personalActivityCopy: {
+    flex: 1,
+  },
+  personalActivityTitle: {
+    color: "#2D3748",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  personalActivityDetail: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  personalActivityDate: {
+    color: "#94A3B8",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+  personalStatusPill: {
+    borderRadius: 999,
+    backgroundColor: "#EAF8ED",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  personalStatusText: {
+    color: "#2E7D32",
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
   },
   helperStats: {
     flexDirection: "row",
