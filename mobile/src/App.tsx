@@ -59,6 +59,12 @@ type EmergencySession = {
   status: CheckInStatus;
 };
 
+type MissionChatMessage = {
+  id: number;
+  from: "me" | "them" | "system";
+  text: string;
+};
+
 type LegalSection = {
   title: string;
   body: string[];
@@ -129,6 +135,15 @@ const defaultEmergencySession: EmergencySession = {
   elapsedSeconds: 0,
   status: "locked",
 };
+
+const presetChatMessages = [
+  "I'm on my way. Stay where you are if it is safe.",
+  "Can you share exactly what you can see around you?",
+  "Are you able to talk right now?",
+  "Move to a brighter or more public place if you can.",
+  "Keep your phone with you and do not end the session.",
+  "I can see your location. I will update you every minute.",
+];
 
 const aboutSections: LegalSection[] = [
   {
@@ -385,7 +400,6 @@ function RequesterTabs({ navigation }: any) {
       elapsedSeconds: 0,
       status: "ready",
     });
-    Alert.alert("Buddies notified", "Your selected buddies were alerted immediately and can trace your live session.");
   }
 
   return (
@@ -451,8 +465,11 @@ const tabOptions = {
 
 function RequesterHome({ navigation, route, rootNavigation: providedRootNavigation, onEmergencyRequest }: any) {
   const [locationStatus, setLocationStatus] = useState("Location not shared yet");
+  const [sosLaunching, setSosLaunching] = useState(false);
   const rootNavigation = providedRootNavigation ?? route.params?.rootNavigation ?? navigation;
   const radarPulse = useRef(new Animated.Value(0)).current;
+  const launchPulse = useRef(new Animated.Value(0)).current;
+  const launchIconScale = useRef(new Animated.Value(0.72)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -474,6 +491,38 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
     return () => animation.stop();
   }, [radarPulse]);
 
+  useEffect(() => {
+    if (!sosLaunching) {
+      launchPulse.setValue(0);
+      launchIconScale.setValue(0.72);
+      return;
+    }
+
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(launchPulse, {
+          toValue: 1,
+          duration: 720,
+          useNativeDriver: true,
+        }),
+        Animated.timing(launchPulse, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    Animated.spring(launchIconScale, {
+      toValue: 1,
+      friction: 5,
+      tension: 90,
+      useNativeDriver: true,
+    }).start();
+    pulseLoop.start();
+    return () => pulseLoop.stop();
+  }, [launchIconScale, launchPulse, sosLaunching]);
+
   const radarScale = radarPulse.interpolate({
     inputRange: [0, 1],
     outputRange: [0.55, 1],
@@ -494,13 +543,38 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
   }
 
   async function sendSos() {
+    if (sosLaunching) return;
     await requestLocation();
     onEmergencyRequest?.();
-    navigation.navigate("Check In");
+    setSosLaunching(true);
+    setTimeout(() => {
+      setSosLaunching(false);
+      navigation.navigate("Check In");
+    }, 1850);
   }
+
+  const launchPulseScale = launchPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.82, 2.45],
+  });
+  const launchPulseOpacity = launchPulse.interpolate({
+    inputRange: [0, 0.62, 1],
+    outputRange: [0.42, 0.18, 0],
+  });
 
   return (
     <Screen>
+      {sosLaunching ? (
+        <View style={styles.sosLaunchOverlay}>
+          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, { opacity: launchPulseOpacity, transform: [{ scale: launchPulseScale }] }]} />
+          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, styles.sosLaunchRingSmall, { opacity: launchPulseOpacity, transform: [{ scale: launchPulseScale }] }]} />
+          <Animated.View style={[styles.sosLaunchIcon, { transform: [{ scale: launchIconScale }] }]}>
+            <Ionicons name="radio" size={58} color="#fff" />
+          </Animated.View>
+          <Text style={styles.sosLaunchTitle}>Sending SOS...</Text>
+          <Text style={styles.sosLaunchSub}>Notifying your selected buddies and preparing Safe Check-In.</Text>
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={styles.scroll}>
         <RequesterHeader onSwitch={() => rootNavigation.navigate("Mode")} />
         <View style={styles.sosWrap}>
@@ -999,9 +1073,14 @@ function EmergencyContacts() {
 
 function HelperHome({ navigation, route }: any) {
   const rootNavigation = route.params?.rootNavigation ?? navigation;
+  const [activeChatRequest, setActiveChatRequest] = useState<Request | null>(null);
 
   function acceptRequest(req: Request) {
-    Alert.alert("Mission accepted", `Navigate to ${req.user}. ETA ${req.eta}.`);
+    setActiveChatRequest(req);
+  }
+
+  if (activeChatRequest) {
+    return <MissionChat request={activeChatRequest} onBack={() => setActiveChatRequest(null)} />;
   }
 
   return (
@@ -1023,6 +1102,100 @@ function HelperHome({ navigation, route }: any) {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => <RequestCard request={item} onAccept={() => acceptRequest(item)} />}
       />
+    </Screen>
+  );
+}
+
+function MissionChat({ request, onBack }: { request: Request; onBack: () => void }) {
+  const [messages, setMessages] = useState<MissionChatMessage[]>([
+    { id: 1, from: "system", text: `Mission accepted. ETA ${request.eta}.` },
+    { id: 2, from: "them", text: request.message },
+  ]);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customText, setCustomText] = useState("");
+
+  function sendMessage(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setMessages(current => [...current, { id: Date.now(), from: "me", text: trimmed }]);
+    setCustomText("");
+    setCustomOpen(false);
+  }
+
+  return (
+    <Screen>
+      <View style={styles.chatScreen}>
+        <LinearGradient colors={["#1652B7", "#2F75C8"]} style={styles.chatHeader}>
+          <Pressable style={styles.chatBackButton} onPress={onBack}>
+            <Ionicons name="chevron-back" size={22} color="#fff" />
+          </Pressable>
+          <View style={styles.chatAvatar}>
+            <Text style={styles.chatAvatarText}>{request.user.slice(0, 1)}</Text>
+          </View>
+          <View style={styles.chatHeaderCopy}>
+            <Text style={styles.chatTitle}>{request.user}</Text>
+            <Text style={styles.chatSub}>{request.distance} away - live mission chat</Text>
+          </View>
+        </LinearGradient>
+
+        <ScrollView style={styles.chatMessages} contentContainerStyle={styles.chatMessagesContent}>
+          {messages.map(message => (
+            <View
+              key={message.id}
+              style={[
+                styles.chatBubble,
+                message.from === "me" && styles.chatBubbleMe,
+                message.from === "system" && styles.chatBubbleSystem,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chatBubbleText,
+                  message.from === "me" && styles.chatBubbleTextMe,
+                  message.from === "system" && styles.chatBubbleTextSystem,
+                ]}
+              >
+                {message.text}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        <View style={styles.presetPanel}>
+          <Text style={styles.presetTitle}>Quick messages</Text>
+          <View style={styles.presetGrid}>
+            {presetChatMessages.map(message => (
+              <Pressable key={message} style={({ pressed }) => [styles.presetChip, pressed && styles.categoryPressed]} onPress={() => sendMessage(message)}>
+                <Text style={styles.presetChipText}>{message}</Text>
+              </Pressable>
+            ))}
+            <Pressable style={({ pressed }) => [styles.customChip, pressed && styles.categoryPressed]} onPress={() => setCustomOpen(value => !value)}>
+              <Ionicons name="create-outline" size={17} color="#1652B7" />
+              <Text style={styles.customChipText}>Custom message</Text>
+            </Pressable>
+          </View>
+
+          {customOpen ? (
+            <View style={styles.customMessageBox}>
+              <TextInput
+                value={customText}
+                onChangeText={setCustomText}
+                placeholder="Type a custom update..."
+                placeholderTextColor="#8B95A1"
+                style={styles.customMessageInput}
+                multiline
+              />
+              <Pressable
+                style={[styles.customSendButton, customText.trim().length === 0 && styles.customSendDisabled]}
+                disabled={customText.trim().length === 0}
+                onPress={() => sendMessage(customText)}
+              >
+                <Ionicons name="send" size={18} color="#fff" />
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      </View>
     </Screen>
   );
 }
@@ -1729,6 +1902,57 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     marginTop: 12,
+  },
+  sosLaunchOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+    backgroundColor: "#F40012",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    overflow: "hidden",
+  },
+  sosLaunchRing: {
+    position: "absolute",
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.72)",
+    backgroundColor: "rgba(255,255,255,0.16)",
+  },
+  sosLaunchRingSmall: {
+    width: 138,
+    height: 138,
+    borderRadius: 69,
+    borderColor: "rgba(255,255,255,0.58)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  sosLaunchIcon: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.5)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sosLaunchTitle: {
+    color: "#fff",
+    fontSize: 27,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 30,
+  },
+  sosLaunchSub: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 21,
+    textAlign: "center",
+    marginTop: 16,
+    maxWidth: 320,
   },
   requesterHeader: {
     marginHorizontal: 0,
@@ -2606,6 +2830,188 @@ const styles = StyleSheet.create({
   acceptButtonText: {
     color: "#fff",
     fontWeight: "900",
+  },
+  chatScreen: {
+    flex: 1,
+    backgroundColor: "#F6F8FC",
+  },
+  chatHeader: {
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  chatBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.32)",
+  },
+  chatAvatarText: {
+    color: "#fff",
+    fontSize: 21,
+    fontWeight: "900",
+  },
+  chatHeaderCopy: {
+    flex: 1,
+  },
+  chatTitle: {
+    color: "#fff",
+    fontSize: 19,
+    fontWeight: "900",
+  },
+  chatSub: {
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+  chatMessages: {
+    flex: 1,
+  },
+  chatMessagesContent: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 12,
+  },
+  chatBubble: {
+    maxWidth: "82%",
+    alignSelf: "flex-start",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    borderBottomLeftRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+  },
+  chatBubbleMe: {
+    alignSelf: "flex-end",
+    backgroundColor: "#1652B7",
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 6,
+    borderColor: "#1652B7",
+  },
+  chatBubbleSystem: {
+    alignSelf: "center",
+    backgroundColor: "#EAF2FF",
+    borderBottomLeftRadius: 18,
+    maxWidth: "92%",
+  },
+  chatBubbleText: {
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 19,
+  },
+  chatBubbleTextMe: {
+    color: "#fff",
+  },
+  chatBubbleTextSystem: {
+    color: "#1652B7",
+    textAlign: "center",
+  },
+  presetPanel: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 18,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(22, 82, 183, 0.08)",
+  },
+  presetTitle: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.1,
+    marginBottom: 12,
+  },
+  presetGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 9,
+  },
+  presetChip: {
+    maxWidth: "100%",
+    borderRadius: 14,
+    backgroundColor: "#F1F5FF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  presetChipText: {
+    color: "#1E3A8A",
+    fontSize: 12,
+    fontWeight: "800",
+    lineHeight: 17,
+  },
+  customChip: {
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.4,
+    borderColor: "#1652B7",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  customChipText: {
+    color: "#1652B7",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  customMessageBox: {
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 10,
+  },
+  customMessageInput: {
+    flex: 1,
+    minHeight: 50,
+    maxHeight: 104,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: "#1F2937",
+    fontSize: 13,
+    fontWeight: "700",
+    textAlignVertical: "top",
+  },
+  customSendButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: "#1652B7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  customSendDisabled: {
+    backgroundColor: "#CBD5E1",
   },
   mapMock: {
     height: 360,
