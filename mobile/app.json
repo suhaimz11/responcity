@@ -22,14 +22,18 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.responcity.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Responcity uses your location to alert nearby verified responders during an emergency."
+        "NSLocationWhenInUseUsageDescription": "Responcity uses your location to alert nearby verified responders during an emergency.",
+        "NSCameraUsageDescription": "Responcity uses the camera so you can capture emergency proof.",
+        "NSMicrophoneUsageDescription": "Responcity uses the microphone when you record video proof."
       }
     },
     "android": {
       "package": "com.responcity.app",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO"
       ]
     },
     "extra": {

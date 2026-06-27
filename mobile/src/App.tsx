@@ -18,6 +18,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import * as Location from "expo-location";
+import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 
 type RootStackParamList = {
@@ -68,6 +69,7 @@ type MissionChatMessage = {
 type ProofAsset = {
   type: "photo" | "video";
   name: string;
+  uri?: string;
 };
 
 type LegalSection = {
@@ -793,11 +795,35 @@ function RequestDetailsScreen({ navigation, route }: any) {
   }
 
   function pickProof() {
-    Alert.alert("Add proof", "Choose the type of proof you want to attach.", [
-      { text: "Photo", onPress: () => setProofAsset({ type: "photo", name: "Emergency photo proof added" }) },
-      { text: "Video", onPress: () => setProofAsset({ type: "video", name: "Emergency video proof added" }) },
+    Alert.alert("Add proof", "Open camera for a photo or video.", [
+      { text: "Photo", onPress: () => openCamera("photo") },
+      { text: "Video", onPress: () => openCamera("video") },
       { text: "Cancel", style: "cancel" },
     ]);
+  }
+
+  async function openCamera(type: "photo" | "video") {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Camera permission needed", "Allow camera access to capture emergency proof.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: type === "video" ? ["videos"] : ["images"],
+      allowsEditing: false,
+      quality: 0.72,
+      videoMaxDuration: 30,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      const asset = result.assets[0];
+      setProofAsset({
+        type,
+        uri: asset.uri,
+        name: asset.fileName ?? (type === "video" ? "Emergency video captured" : "Emergency photo captured"),
+      });
+    }
   }
 
   const finalDescription = customMessageOpen
