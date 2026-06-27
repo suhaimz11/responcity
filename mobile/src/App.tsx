@@ -65,6 +65,11 @@ type MissionChatMessage = {
   text: string;
 };
 
+type ProofAsset = {
+  type: "photo" | "video";
+  name: string;
+};
+
 type LegalSection = {
   title: string;
   body: string[];
@@ -448,8 +453,9 @@ function HomeStat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap
   );
 }
 
-function RequesterTabs({ navigation }: any) {
+function RequesterTabs({ navigation, route }: any) {
   const [session, setSession] = useState<EmergencySession>(defaultEmergencySession);
+  const lastUnlockToken = useRef<number | null>(null);
 
   function unlockCheckIn() {
     setSession({
@@ -460,6 +466,15 @@ function RequesterTabs({ navigation }: any) {
       status: "ready",
     });
   }
+
+  useEffect(() => {
+    const token = route.params?.unlockCheckInToken;
+    if (typeof token === "number" && lastUnlockToken.current !== token) {
+      lastUnlockToken.current = token;
+      unlockCheckIn();
+      navigation.navigate("Check In");
+    }
+  }, [navigation, route.params?.unlockCheckInToken]);
 
   return (
     <Tab.Navigator screenOptions={tabOptions}>
@@ -694,7 +709,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
                 pressed && styles.categoryPressed,
               ]}
               onPress={() => {
-                rootNavigation.navigate("RequestDetails", { categoryId: cat.id, unlockCheckIn: onEmergencyRequest });
+                rootNavigation.navigate("RequestDetails", { categoryId: cat.id });
               }}
             >
               <Ionicons name={cat.icon} size={25} color={cat.color} />
@@ -721,6 +736,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
   const [selectedPreset, setSelectedPreset] = useState("");
   const [moreDetails, setMoreDetails] = useState("");
   const [customDescription, setCustomDescription] = useState("");
+  const [proofAsset, setProofAsset] = useState<ProofAsset | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [customMessageOpen, setCustomMessageOpen] = useState(false);
   const [requestLaunching, setRequestLaunching] = useState(false);
@@ -769,12 +785,19 @@ function RequestDetailsScreen({ navigation, route }: any) {
   });
 
   function submitRequest() {
-    route.params?.unlockCheckIn?.();
     setRequestLaunching(true);
     setTimeout(() => {
       setRequestLaunching(false);
-      navigation.navigate("RequesterTabs", { screen: "Check In" });
+      navigation.navigate("RequesterTabs", { unlockCheckInToken: Date.now() });
     }, 1850);
+  }
+
+  function pickProof() {
+    Alert.alert("Add proof", "Choose the type of proof you want to attach.", [
+      { text: "Photo", onPress: () => setProofAsset({ type: "photo", name: "Emergency photo proof added" }) },
+      { text: "Video", onPress: () => setProofAsset({ type: "video", name: "Emergency video proof added" }) },
+      { text: "Cancel", style: "cancel" },
+    ]);
   }
 
   const finalDescription = customMessageOpen
@@ -816,18 +839,20 @@ function RequestDetailsScreen({ navigation, route }: any) {
           <Text style={styles.detailHelp}>Take a direct photo or short video (max 30s) to verify your emergency.</Text>
 
           <View style={styles.proofBox}>
-            <Ionicons name="camera-outline" size={34} color="#9CA3AF" />
-            <Text style={styles.proofText}>Use your camera to capture proof</Text>
-            <View style={styles.proofActions}>
-              <Pressable style={[styles.proofButton, styles.photoButton]}>
-                <Ionicons name="camera" size={17} color="#fff" />
-                <Text style={styles.proofButtonText}>Take Photo</Text>
-              </Pressable>
-              <Pressable style={[styles.proofButton, styles.videoButton]}>
-                <Ionicons name="videocam" size={17} color="#fff" />
-                <Text style={styles.proofButtonText}>Record Video</Text>
-              </Pressable>
-            </View>
+            <Ionicons name={proofAsset ? "checkmark-circle" : "camera-outline"} size={34} color={proofAsset ? theme.green : "#9CA3AF"} />
+            <Text style={styles.proofText}>{proofAsset ? "Proof added" : "Add a photo or video as proof"}</Text>
+            {proofAsset ? (
+              <View style={styles.proofSelectedPill}>
+                <Ionicons name={proofAsset.type === "video" ? "videocam" : "image"} size={16} color="#1652B7" />
+                <Text style={styles.proofSelectedText} numberOfLines={1}>
+                  {proofAsset.name}
+                </Text>
+              </View>
+            ) : null}
+            <Pressable style={({ pressed }) => [styles.proofButton, styles.mediaButton, pressed && styles.categoryPressed]} onPress={pickProof}>
+              <Ionicons name="add-circle" size={18} color="#fff" />
+              <Text style={styles.proofButtonText}>{proofAsset ? "Change Proof" : "Add Photo or Video"}</Text>
+            </Pressable>
           </View>
 
           <Text style={styles.detailLabel}>Describe Your Situation <Text style={styles.required}>*</Text></Text>
@@ -853,9 +878,14 @@ function RequestDetailsScreen({ navigation, route }: any) {
             <Pressable
               style={({ pressed }) => [styles.requestCustomChip, customMessageOpen && styles.requestCustomChipSelected, pressed && styles.categoryPressed]}
               onPress={() => {
-                setCustomMessageOpen(true);
-                setSelectedPreset("");
-                setMoreDetails("");
+                setCustomMessageOpen(value => {
+                  const next = !value;
+                  if (next) {
+                    setSelectedPreset("");
+                    setMoreDetails("");
+                  }
+                  return next;
+                });
               }}
             >
               <View style={styles.requestCustomIcon}>
@@ -2621,6 +2651,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
+  mediaButton: {
+    minWidth: 190,
+    marginTop: 18,
+    backgroundColor: "#2F6FBA",
+  },
   photoButton: {
     backgroundColor: "#2F6FBA",
   },
@@ -2631,6 +2666,25 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "900",
+  },
+  proofSelectedPill: {
+    maxWidth: "92%",
+    minHeight: 38,
+    borderRadius: 12,
+    backgroundColor: "#EEF4FF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.14)",
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+  },
+  proofSelectedText: {
+    flex: 1,
+    color: "#1652B7",
+    fontSize: 12,
+    fontWeight: "800",
   },
   detailInput: {
     minHeight: 126,
