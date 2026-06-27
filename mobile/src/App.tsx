@@ -95,7 +95,8 @@ const categories: Category[] = [
   { id: "lost-found", label: "Lost & Found", icon: "search", color: "#5E35B1", bg: "#F4F0FF" },
   { id: "safety", label: "Safety", icon: "shield-checkmark", color: "#C62828", bg: "#FFF0F0" },
   { id: "mental", label: "Mental", icon: "heart", color: "#7C4DFF", bg: "#F4F0FF" },
-  { id: "transport", label: "Transport", icon: "navigate", color: "#1565C0", bg: "#EEF4FF" },
+  { id: "transport", label: "Vehicle", icon: "car", color: "#1565C0", bg: "#EEF4FF" },
+  { id: "home", label: "Home", icon: "home", color: "#00897B", bg: "#EAF7F4" },
 ];
 
 const nearbyRequests: Request[] = [
@@ -144,6 +145,64 @@ const presetChatMessages = [
   "Keep your phone with you and do not end the session.",
   "I can see your location. I will update you every minute.",
 ];
+
+const requestPresetMessagesByCategory: Record<string, string[]> = {
+  medical: [
+    "Medical emergency",
+    "Chest pain or breathing trouble",
+    "Injury or bleeding",
+    "Fainted or unconscious",
+    "Medicine or first-aid needed",
+  ],
+  transport: [
+    "Vehicle breakdown",
+    "Flat tyre",
+    "Dead battery / jump start",
+    "Minor accident assistance",
+    "Need towing or roadside help",
+  ],
+  home: [
+    "Locked out of home",
+    "Water leak or flooding",
+    "Power outage",
+    "Gas leak or unsafe smell",
+    "Urgent help at home",
+  ],
+  blood: [
+    "Need blood urgently",
+    "Specific blood group needed",
+    "Hospital patient needs blood",
+    "Need help contacting donors",
+    "Blood donation camp volunteers",
+  ],
+  mental: [
+    "Panic attack",
+    "Need someone to talk to",
+    "Emotional support needed",
+    "Feeling unsafe with myself",
+    "Need mental health professional nearby",
+  ],
+  "lost-found": [
+    "Lost item",
+    "Found item",
+    "Lost pet",
+    "Found lost child / elderly person",
+  ],
+  safety: [
+    "I feel unsafe",
+    "I am being followed",
+    "Trace me with Safe Check-In",
+    "Unsafe unfamiliar place",
+    "Urgent safety help",
+  ],
+  accident: [
+    "Road accident",
+    "Minor accident assistance",
+    "Someone is injured",
+    "Need first aid",
+    "Need urgent location sharing",
+  ],
+};
 
 const aboutSections: LegalSection[] = [
   {
@@ -544,9 +603,9 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
 
   async function sendSos() {
     if (sosLaunching) return;
+    setSosLaunching(true);
     await requestLocation();
     onEmergencyRequest?.();
-    setSosLaunching(true);
     setTimeout(() => {
       setSosLaunching(false);
       navigation.navigate("Check In");
@@ -564,17 +623,6 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
 
   return (
     <Screen>
-      {sosLaunching ? (
-        <View style={styles.sosLaunchOverlay}>
-          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, { opacity: launchPulseOpacity, transform: [{ scale: launchPulseScale }] }]} />
-          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, styles.sosLaunchRingSmall, { opacity: launchPulseOpacity, transform: [{ scale: launchPulseScale }] }]} />
-          <Animated.View style={[styles.sosLaunchIcon, { transform: [{ scale: launchIconScale }] }]}>
-            <Ionicons name="radio" size={58} color="#fff" />
-          </Animated.View>
-          <Text style={styles.sosLaunchTitle}>Sending SOS...</Text>
-          <Text style={styles.sosLaunchSub}>Notifying your selected buddies and preparing Safe Check-In.</Text>
-        </View>
-      ) : null}
       <ScrollView contentContainerStyle={styles.scroll}>
         <RequesterHeader onSwitch={() => rootNavigation.navigate("Mode")} />
         <View style={styles.sosWrap}>
@@ -602,10 +650,25 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
                 },
               ]}
             />
+            {sosLaunching ? (
+              <>
+                <Animated.View pointerEvents="none" style={[styles.sosButtonLaunchRing, { opacity: launchPulseOpacity, transform: [{ scale: launchPulseScale }] }]} />
+                <Animated.View pointerEvents="none" style={[styles.sosButtonLaunchRing, styles.sosButtonLaunchRingSmall, { opacity: launchPulseOpacity, transform: [{ scale: launchPulseScale }] }]} />
+              </>
+            ) : null}
             <Pressable style={({ pressed }) => [styles.sosButton, pressed && styles.pressed]} onPress={sendSos}>
               <LinearGradient colors={[theme.orange, theme.red]} style={styles.sosGradient}>
-                <Text style={styles.sosText}>SOS</Text>
-                <Text style={styles.sosSmallText}>Press for help</Text>
+                {sosLaunching ? (
+                  <Animated.View style={{ alignItems: "center", transform: [{ scale: launchIconScale }] }}>
+                    <Ionicons name="radio" size={35} color="#fff" />
+                    <Text style={styles.sosSmallText}>Sending</Text>
+                  </Animated.View>
+                ) : (
+                  <>
+                    <Text style={styles.sosText}>SOS</Text>
+                    <Text style={styles.sosSmallText}>Press for help</Text>
+                  </>
+                )}
               </LinearGradient>
             </Pressable>
           </View>
@@ -654,11 +717,87 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
 
 function RequestDetailsScreen({ navigation, route }: any) {
   const category = categoryFor(route.params?.categoryId ?? "medical");
-  const [description, setDescription] = useState("");
+  const categoryPresets = requestPresetMessagesByCategory[category.id] ?? requestPresetMessagesByCategory.safety;
+  const [selectedPreset, setSelectedPreset] = useState("");
+  const [moreDetails, setMoreDetails] = useState("");
+  const [customDescription, setCustomDescription] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [customMessageOpen, setCustomMessageOpen] = useState(false);
+  const [requestLaunching, setRequestLaunching] = useState(false);
+  const requestLaunchPulse = useRef(new Animated.Value(0)).current;
+  const requestLaunchIconScale = useRef(new Animated.Value(0.72)).current;
+
+  useEffect(() => {
+    if (!requestLaunching) {
+      requestLaunchPulse.setValue(0);
+      requestLaunchIconScale.setValue(0.72);
+      return;
+    }
+
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(requestLaunchPulse, {
+          toValue: 1,
+          duration: 720,
+          useNativeDriver: true,
+        }),
+        Animated.timing(requestLaunchPulse, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    Animated.spring(requestLaunchIconScale, {
+      toValue: 1,
+      friction: 5,
+      tension: 90,
+      useNativeDriver: true,
+    }).start();
+    pulseLoop.start();
+    return () => pulseLoop.stop();
+  }, [requestLaunchIconScale, requestLaunchPulse, requestLaunching]);
+
+  const requestPulseScale = requestLaunchPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.82, 2.45],
+  });
+  const requestPulseOpacity = requestLaunchPulse.interpolate({
+    inputRange: [0, 0.62, 1],
+    outputRange: [0.42, 0.18, 0],
+  });
+
+  function submitRequest() {
+    route.params?.unlockCheckIn?.();
+    setRequestLaunching(true);
+    setTimeout(() => {
+      setRequestLaunching(false);
+      navigation.navigate("RequesterTabs", { screen: "Check In" });
+    }, 1850);
+  }
+
+  const finalDescription = customMessageOpen
+    ? customDescription.trim()
+    : [selectedPreset, moreDetails.trim()].filter(Boolean).join(" - ");
+  const canSubmit = confirmed && finalDescription.length > 0 && (customMessageOpen || moreDetails.trim().length > 0);
+  const charCount = customMessageOpen
+    ? customDescription.length
+    : selectedPreset.length + (moreDetails.trim().length > 0 ? 3 + moreDetails.length : moreDetails.length);
 
   return (
     <Screen>
+      {requestLaunching ? (
+        <View style={styles.sosLaunchOverlay}>
+          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
+          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, styles.sosLaunchRingSmall, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
+          <Animated.View style={[styles.sosLaunchIcon, { transform: [{ scale: requestLaunchIconScale }] }]}>
+            <Ionicons name="radio" size={58} color="#fff" />
+          </Animated.View>
+          <Text style={styles.sosLaunchTitle}>Sending SOS...</Text>
+          <Text style={styles.sosLaunchSub}>Notifying your selected buddies and preparing Safe Check-In.</Text>
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={styles.detailScroll}>
         <RequesterHeader onSwitch={() => navigation.navigate("Mode")} />
         <View style={styles.detailSheet}>
@@ -692,16 +831,74 @@ function RequestDetailsScreen({ navigation, route }: any) {
           </View>
 
           <Text style={styles.detailLabel}>Describe Your Situation <Text style={styles.required}>*</Text></Text>
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            maxLength={300}
-            placeholder="Briefly explain what you need help with, where you are, and any important details..."
-            placeholderTextColor="#8B95A1"
-            style={styles.detailInput}
-          />
-          <Text style={styles.charCount}>{description.length}/300</Text>
+          <Text style={styles.presetHint}>Choose a preset or write your own.</Text>
+          <View style={styles.requestPresetGrid}>
+            {categoryPresets.map(message => (
+              <Pressable
+                key={message}
+                style={({ pressed }) => [
+                  styles.requestPresetChip,
+                  !customMessageOpen && selectedPreset === message && styles.requestPresetChipSelected,
+                  pressed && styles.categoryPressed,
+                ]}
+                onPress={() => {
+                  setSelectedPreset(message);
+                  setCustomMessageOpen(false);
+                  setCustomDescription("");
+                }}
+              >
+                <Text style={[styles.requestPresetText, !customMessageOpen && selectedPreset === message && styles.requestPresetTextSelected]}>{message}</Text>
+              </Pressable>
+            ))}
+            <Pressable
+              style={({ pressed }) => [styles.requestCustomChip, customMessageOpen && styles.requestCustomChipSelected, pressed && styles.categoryPressed]}
+              onPress={() => {
+                setCustomMessageOpen(true);
+                setSelectedPreset("");
+                setMoreDetails("");
+              }}
+            >
+              <View style={styles.requestCustomIcon}>
+                <Ionicons name="create-outline" size={17} color={customMessageOpen ? "#fff" : "#1652B7"} />
+              </View>
+              <View style={styles.requestCustomCopy}>
+                <Text style={[styles.requestCustomText, customMessageOpen && styles.requestPresetTextSelected]}>Custom message</Text>
+                <Text style={[styles.requestCustomSub, customMessageOpen && styles.requestCustomSubSelected]}>Write details in your own words</Text>
+              </View>
+              <Ionicons name={customMessageOpen ? "chevron-up" : "chevron-down"} size={18} color={customMessageOpen ? "#fff" : "#64748B"} />
+            </Pressable>
+          </View>
+          {customMessageOpen ? (
+            <View style={styles.customRequestBox}>
+              <TextInput
+                value={customDescription}
+                onChangeText={setCustomDescription}
+                multiline
+                maxLength={300}
+                placeholder="Type your custom emergency message..."
+                placeholderTextColor="#8B95A1"
+                style={styles.detailInput}
+              />
+            </View>
+          ) : selectedPreset ? (
+            <View style={styles.describeMoreBox}>
+              <View style={styles.selectedPresetBox}>
+                <Ionicons name="checkmark-circle" size={18} color="#1652B7" />
+                <Text style={styles.selectedPresetText}>{selectedPreset}</Text>
+              </View>
+              <Text style={styles.describeMoreLabel}>Describe more <Text style={styles.required}>*</Text></Text>
+              <TextInput
+                value={moreDetails}
+                onChangeText={setMoreDetails}
+                multiline
+                maxLength={220}
+                placeholder={detailPlaceholderFor(category.id)}
+                placeholderTextColor="#8B95A1"
+                style={styles.describeMoreInput}
+              />
+            </View>
+          ) : null}
+          <Text style={styles.charCount}>{charCount}/300</Text>
 
           <Pressable style={styles.confirmBox} onPress={() => setConfirmed(value => !value)}>
             <View style={[styles.checkboxBox, confirmed && styles.checkboxChecked]}>
@@ -719,14 +916,11 @@ function RequestDetailsScreen({ navigation, route }: any) {
           <Pressable
             style={({ pressed }) => [
               styles.requestHelpButton,
-              (!confirmed || description.trim().length === 0) && styles.requestHelpButtonDisabled,
-              pressed && confirmed && description.trim().length > 0 && styles.pressed,
+              !canSubmit && styles.requestHelpButtonDisabled,
+              pressed && canSubmit && styles.pressed,
             ]}
-            disabled={!confirmed || description.trim().length === 0}
-            onPress={() => {
-              route.params?.unlockCheckIn?.();
-              navigation.navigate("RequesterTabs", { screen: "Check In" });
-            }}
+            disabled={!canSubmit}
+            onPress={submitRequest}
           >
             <Ionicons name="send" size={18} color="#fff" />
             <Text style={styles.requestHelpButtonText}>Request Help</Text>
@@ -1057,6 +1251,25 @@ function formatElapsed(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function detailPlaceholderFor(categoryId: string) {
+  switch (categoryId) {
+    case "medical":
+      return "Add symptoms, age if relevant, medicine needed, and exact location...";
+    case "transport":
+      return "Add vehicle type, road/location, whether you are safe, and what help is needed...";
+    case "home":
+      return "Add address details, who can access it, and what makes it urgent...";
+    case "blood":
+      return "Add blood group, hospital, patient name/ward, units needed, and contact number...";
+    case "mental":
+      return "Add what is happening, whether you are alone, and what kind of support you need...";
+    case "lost-found":
+      return "Add item/person/pet description, last seen location, time, and contact details...";
+    default:
+      return "Add exact location, what happened, who is with you, and what help you need...";
+  }
 }
 
 function EmergencyContacts() {
@@ -1853,6 +2066,22 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 90, 61, 0.16)",
     borderColor: "rgba(255, 90, 61, 0.14)",
   },
+  sosButtonLaunchRing: {
+    position: "absolute",
+    width: 142,
+    height: 142,
+    borderRadius: 71,
+    backgroundColor: "rgba(255, 23, 68, 0.28)",
+    borderWidth: 2,
+    borderColor: "rgba(255, 23, 68, 0.34)",
+  },
+  sosButtonLaunchRingSmall: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: "rgba(255, 107, 53, 0.24)",
+    borderColor: "rgba(255, 107, 53, 0.32)",
+  },
   sosPrompt: {
     color: "#6B7280",
     fontSize: 15,
@@ -2218,6 +2447,133 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginBottom: 12,
   },
+  presetHint: {
+    color: "#7A8798",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: -4,
+    marginBottom: 12,
+  },
+  requestPresetGrid: {
+    gap: 8,
+    marginBottom: 14,
+  },
+  requestPresetChip: {
+    width: "100%",
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.12)",
+    backgroundColor: "#F1F5FF",
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  requestPresetChipSelected: {
+    backgroundColor: "#1652B7",
+    borderColor: "#1652B7",
+  },
+  requestPresetText: {
+    color: "#1E3A8A",
+    fontSize: 12,
+    fontWeight: "800",
+    lineHeight: 17,
+  },
+  requestPresetTextSelected: {
+    color: "#fff",
+  },
+  requestCustomChip: {
+    width: "100%",
+    borderRadius: 15,
+    borderWidth: 1.4,
+    borderColor: "#1652B7",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 13,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 4,
+  },
+  requestCustomChipSelected: {
+    backgroundColor: "#1652B7",
+    borderColor: "#1652B7",
+  },
+  requestCustomIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "rgba(22, 82, 183, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  requestCustomCopy: {
+    flex: 1,
+  },
+  requestCustomText: {
+    color: "#1652B7",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  requestCustomSub: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  requestCustomSubSelected: {
+    color: "rgba(255,255,255,0.78)",
+  },
+  customRequestBox: {
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.2,
+    borderColor: "rgba(22, 82, 183, 0.12)",
+    padding: 4,
+    marginBottom: 2,
+  },
+  selectedPresetBox: {
+    borderRadius: 14,
+    backgroundColor: "#EEF4FF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.14)",
+    padding: 13,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
+  },
+  describeMoreBox: {
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.2,
+    borderColor: "rgba(22, 82, 183, 0.12)",
+    padding: 10,
+  },
+  describeMoreLabel: {
+    color: "#374151",
+    fontSize: 13,
+    fontWeight: "900",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  describeMoreInput: {
+    minHeight: 104,
+    backgroundColor: "#F8FAFC",
+    borderColor: "#D5DAE2",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 13,
+    color: "#1F2937",
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+    textAlignVertical: "top",
+  },
+  selectedPresetText: {
+    flex: 1,
+    color: "#1E3A8A",
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 19,
+  },
   required: {
     color: theme.red,
   },
@@ -2288,6 +2644,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 20,
     textAlignVertical: "top",
+  },
+  detailInputMuted: {
+    backgroundColor: "#F8FAFC",
   },
   charCount: {
     color: "#6B7280",
