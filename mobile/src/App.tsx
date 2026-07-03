@@ -47,6 +47,8 @@ type Request = {
   distance: string;
   eta: string;
   urgent: boolean;
+  buddy?: boolean;
+  timeAgo?: string;
 };
 
 type CheckInStatus = "locked" | "ready" | "active" | "sos" | "review" | "thanks";
@@ -129,30 +131,77 @@ const categories: Category[] = [
 const nearbyRequests: Request[] = [
   {
     id: "r1",
-    user: "Priya S.",
+    user: "Sarah M.",
     category: "medical",
-    message: "Chest pain near Indiranagar. Needs immediate support.",
-    distance: "0.4 km",
-    eta: "3 min",
+    message: "Diabetic emergency - need glucose tablets urgently",
+    distance: "0.3 mi",
+    eta: "2 min",
     urgent: true,
+    timeAgo: "2 min ago",
   },
   {
     id: "r2",
-    user: "Rahul M.",
-    category: "accident",
-    message: "Bike accident. First aid needed until ambulance arrives.",
-    distance: "0.8 km",
+    user: "James K.",
+    category: "transport",
+    message: "Flat tire on I-95, stranded with kids in car",
+    distance: "1.2 mi",
     eta: "5 min",
-    urgent: true,
+    urgent: false,
+    buddy: true,
+    timeAgo: "5 min ago",
   },
   {
     id: "r3",
-    user: "Aisha K.",
-    category: "mental",
-    message: "Panic attack. Needs a verified calm responder.",
-    distance: "1.1 km",
+    user: "Maria L.",
+    category: "safety",
+    message: "Feeling unsafe, need escort to parking garage",
+    distance: "0.7 mi",
+    eta: "8 min",
+    urgent: true,
+    timeAgo: "8 min ago",
+  },
+  {
+    id: "r4",
+    user: "Omar H.",
+    category: "blood",
+    message: "Hospital patient needs O+ blood donor nearby",
+    distance: "2.0 mi",
+    eta: "10 min",
+    urgent: false,
+    timeAgo: "10 min ago",
+  },
+];
+
+const alertPoolRequests: Request[] = [
+  {
+    id: "a1",
+    user: "Nina P.",
+    category: "home",
+    message: "Gas smell in apartment hallway, needs nearby support",
+    distance: "0.9 mi",
+    eta: "4 min",
+    urgent: true,
+    timeAgo: "3 min ago",
+  },
+  {
+    id: "a2",
+    user: "Dev R.",
+    category: "lost-found",
+    message: "Lost elderly person near bus stop",
+    distance: "1.6 mi",
     eta: "7 min",
     urgent: false,
+    timeAgo: "6 min ago",
+  },
+  {
+    id: "a3",
+    user: "Leah T.",
+    category: "mental",
+    message: "Panic attack, needs a calm responder",
+    distance: "2.4 mi",
+    eta: "12 min",
+    urgent: false,
+    timeAgo: "9 min ago",
   },
 ];
 
@@ -614,7 +663,7 @@ function RequesterTabs({ navigation, route }: any) {
       >
         {props => <SafeCheckIn {...props} session={session} setSession={setSession} />}
       </Tab.Screen>
-      <Tab.Screen name="Activity" component={MyActivityScreen} options={{ tabBarIcon: tabIcon("pulse") }} />
+      <Tab.Screen name="Activity" component={MissionHistoryScreen} options={{ tabBarIcon: tabIcon("pulse") }} />
     </Tab.Navigator>
   );
 }
@@ -628,8 +677,8 @@ function HelperTabs({ navigation }: any) {
         initialParams={{ rootNavigation: navigation }}
         options={{ tabBarIcon: tabIcon("radio") }}
       />
-      <Tab.Screen name="Map" component={ResponderMap} options={{ tabBarIcon: tabIcon("map") }} />
-      <Tab.Screen name="Stats" component={ResponderStats} options={{ tabBarIcon: tabIcon("trophy") }} />
+      <Tab.Screen name="Community" component={ResponderMap} options={{ tabBarIcon: tabIcon("people") }} />
+      <Tab.Screen name="Rankings" component={ResponderStats} options={{ tabBarIcon: tabIcon("trophy") }} />
     </Tab.Navigator>
   );
 }
@@ -844,12 +893,6 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
           ))}
         </View>
 
-        <NearbyActivityPreview
-          radiusKm={nearbyRadiusKm}
-          onRadiusChange={setNearbyRadiusKm}
-          missions={homeNearbyMissions}
-        />
-
         <Text style={styles.buddiesTitle}>My Buddies</Text>
         <View style={styles.buddyCard}>
           <View style={styles.buddyAvatar}>
@@ -966,6 +1009,17 @@ function RequestDetailsScreen({ navigation, route }: any) {
 
   return (
     <Screen>
+      {requestLaunching ? (
+        <View style={styles.sosLaunchOverlay}>
+          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
+          <Animated.View pointerEvents="none" style={[styles.sosLaunchRing, styles.sosLaunchRingSmall, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
+          <Animated.View style={[styles.sosLaunchIcon, { transform: [{ scale: requestLaunchIconScale }] }]}>
+            <Ionicons name="radio" size={58} color="#fff" />
+          </Animated.View>
+          <Text style={styles.sosLaunchTitle}>Sending SOS...</Text>
+          <Text style={styles.sosLaunchSub}>Notifying your selected buddies and preparing Safe Check-In.</Text>
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={styles.detailScroll}>
         <RequesterHeader onSwitch={() => navigation.navigate("Mode")} />
         <View style={styles.detailSheet}>
@@ -1091,28 +1145,14 @@ function RequestDetailsScreen({ navigation, route }: any) {
           <Pressable
             style={({ pressed }) => [
               styles.requestHelpButton,
-              requestLaunching && styles.requestHelpButtonLaunching,
               !canSubmit && styles.requestHelpButtonDisabled,
               pressed && canSubmit && styles.pressed,
             ]}
-            disabled={!canSubmit || requestLaunching}
+            disabled={!canSubmit}
             onPress={submitRequest}
           >
-            {requestLaunching ? (
-              <>
-                <Animated.View pointerEvents="none" style={[styles.requestButtonLaunchRing, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
-                <Animated.View pointerEvents="none" style={[styles.requestButtonLaunchRing, styles.requestButtonLaunchRingSmall, { opacity: requestPulseOpacity, transform: [{ scale: requestPulseScale }] }]} />
-                <Animated.View style={[styles.requestLaunchingContent, { transform: [{ scale: requestLaunchIconScale }] }]}>
-                  <Ionicons name="radio" size={20} color="#fff" />
-                  <Text style={styles.requestHelpButtonText}>Sending SOS...</Text>
-                </Animated.View>
-              </>
-            ) : (
-              <>
-                <Ionicons name="send" size={18} color="#fff" />
-                <Text style={styles.requestHelpButtonText}>Request Help</Text>
-              </>
-            )}
+            <Ionicons name="send" size={18} color="#fff" />
+            <Text style={styles.requestHelpButtonText}>Request Help</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -1473,86 +1513,67 @@ function EmergencyContacts() {
   );
 }
 
-function MyActivityScreen() {
-  const completedCount = personalActivity.filter(item => item.status === "completed").length;
-  const sosCount = personalActivity.filter(item => item.type === "sos").length;
-  const checkInCount = personalActivity.filter(item => item.type === "checkin").length;
+function MissionHistoryScreen() {
+  const radiusOptions = [1, 3, 5, 10, 25];
+  const [radiusKm, setRadiusKm] = useState(5);
+  const visibleMissions = nearbyMissionHistory.filter(mission => mission.distanceKm <= radiusKm);
+  const totalPoints = visibleMissions.reduce((sum, mission) => sum + mission.points, 0);
+  const streak = Math.min(7, Math.max(1, visibleMissions.length));
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.activityScroll}>
-        <Text style={styles.activityTitle}>My Activity</Text>
+        <Text style={styles.activityTitle}>Activity</Text>
+
         <View style={styles.activityStatsCard}>
-          <ActivityStat icon="checkmark-done" value={String(completedCount)} label="Completed" color={theme.green} />
-          <ActivityStat icon="warning" value={String(sosCount)} label="SOS" color={theme.red} />
-          <ActivityStat icon="shield-checkmark" value={String(checkInCount)} label="Check-Ins" color="#1652B7" />
+          <ActivityStat icon="checkmark-done" value={String(visibleMissions.length)} label="Missions" color={theme.green} />
+          <ActivityStat icon="leaf" value={String(totalPoints)} label="Points" color={theme.orange} />
+          <ActivityStat icon="flame" value={String(streak)} label="Day Streak" color={theme.red} />
+        </View>
+
+        <View style={styles.radiusCard}>
+          <View style={styles.radiusHeader}>
+            <View>
+              <Text style={styles.radiusTitle}>Nearby radius</Text>
+              <Text style={styles.radiusSub}>Showing missions within {radiusKm} km</Text>
+            </View>
+            <View style={styles.radiusBadge}>
+              <Text style={styles.radiusBadgeText}>{radiusKm} km</Text>
+            </View>
+          </View>
+          <View style={styles.radiusOptions}>
+            {radiusOptions.map(option => (
+              <Pressable
+                key={option}
+                style={({ pressed }) => [
+                  styles.radiusChip,
+                  radiusKm === option && styles.radiusChipActive,
+                  pressed && styles.categoryPressed,
+                ]}
+                onPress={() => setRadiusKm(option)}
+              >
+                <Text style={[styles.radiusChipText, radiusKm === option && styles.radiusChipTextActive]}>{option}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         <View style={styles.activitySectionHeader}>
-          <Text style={styles.activitySectionTitle}>Personal History</Text>
-          <Text style={styles.activitySectionMeta}>Private</Text>
+          <Text style={styles.activitySectionTitle}>Mission History</Text>
+          <Text style={styles.activitySectionMeta}>{visibleMissions.length} nearby</Text>
         </View>
 
-        {personalActivity.map(item => <PersonalActivityCard key={item.id} item={item} />)}
+        {visibleMissions.length > 0 ? (
+          visibleMissions.map(mission => <MissionHistoryCard key={mission.id} mission={mission} />)
+        ) : (
+          <View style={styles.emptyHistoryCard}>
+            <Ionicons name="map-outline" size={28} color="#94A3B8" />
+            <Text style={styles.emptyHistoryTitle}>No missions in this radius</Text>
+            <Text style={styles.emptyHistorySub}>Increase the radius to view more nearby activity.</Text>
+          </View>
+        )}
       </ScrollView>
     </Screen>
-  );
-}
-
-function NearbyActivityPreview({
-  radiusKm,
-  onRadiusChange,
-  missions,
-}: {
-  radiusKm: number;
-  onRadiusChange: (value: number) => void;
-  missions: MissionHistoryItem[];
-}) {
-  const radiusOptions = [1, 3, 5, 10, 25];
-
-  return (
-    <View style={styles.nearbyActivityWrap}>
-      <View style={styles.activitySectionHeader}>
-        <Text style={styles.activitySectionTitle}>Nearby Activity</Text>
-        <Text style={styles.activitySectionMeta}>{missions.length} within {radiusKm} km</Text>
-      </View>
-      <View style={styles.radiusCard}>
-        <View style={styles.radiusHeader}>
-          <View>
-            <Text style={styles.radiusTitle}>Community radius</Text>
-            <Text style={styles.radiusSub}>Anonymized missions near you</Text>
-          </View>
-          <View style={styles.radiusBadge}>
-            <Text style={styles.radiusBadgeText}>{radiusKm} km</Text>
-          </View>
-        </View>
-        <View style={styles.radiusOptions}>
-          {radiusOptions.map(option => (
-            <Pressable
-              key={option}
-              style={({ pressed }) => [
-                styles.radiusChip,
-                radiusKm === option && styles.radiusChipActive,
-                pressed && styles.categoryPressed,
-              ]}
-              onPress={() => onRadiusChange(option)}
-            >
-              <Text style={[styles.radiusChipText, radiusKm === option && styles.radiusChipTextActive]}>{option}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      {missions.length > 0 ? (
-        missions.slice(0, 3).map(mission => <MissionHistoryCard key={mission.id} mission={mission} compact />)
-      ) : (
-        <View style={styles.emptyHistoryCard}>
-          <Ionicons name="map-outline" size={28} color="#94A3B8" />
-          <Text style={styles.emptyHistoryTitle}>No nearby activity</Text>
-          <Text style={styles.emptyHistorySub}>Increase the radius to see more anonymized community missions.</Text>
-        </View>
-      )}
-    </View>
   );
 }
 
@@ -1566,28 +1587,10 @@ function ActivityStat({ icon, value, label, color }: { icon: keyof typeof Ionico
   );
 }
 
-function PersonalActivityCard({ item }: { item: PersonalActivityItem }) {
-  return (
-    <View style={styles.personalActivityCard}>
-      <View style={[styles.personalActivityIcon, { backgroundColor: `${item.color}18` }]}>
-        <Ionicons name={item.icon} size={22} color={item.color} />
-      </View>
-      <View style={styles.personalActivityCopy}>
-        <Text style={styles.personalActivityTitle}>{item.title}</Text>
-        <Text style={styles.personalActivityDetail}>{item.detail}</Text>
-        <Text style={styles.personalActivityDate}>{item.date}</Text>
-      </View>
-      <View style={styles.personalStatusPill}>
-        <Text style={styles.personalStatusText}>{item.status}</Text>
-      </View>
-    </View>
-  );
-}
-
-function MissionHistoryCard({ mission, compact = false }: { mission: MissionHistoryItem; compact?: boolean }) {
+function MissionHistoryCard({ mission }: { mission: MissionHistoryItem }) {
   const category = categoryFor(mission.category);
   return (
-    <View style={[styles.missionHistoryCard, compact && styles.missionHistoryCardCompact]}>
+    <View style={styles.missionHistoryCard}>
       <View style={[styles.missionHistoryIcon, { backgroundColor: category.bg }]}>
         <Ionicons name={category.icon} size={22} color={category.color} />
       </View>
@@ -1596,12 +1599,10 @@ function MissionHistoryCard({ mission, compact = false }: { mission: MissionHist
         <Text style={styles.missionHistoryTitle}>{mission.title}</Text>
         <Text style={styles.missionHistoryMeta}>{mission.date} - {mission.distanceKm.toFixed(1)} km away</Text>
       </View>
-      {!compact ? (
-        <View style={styles.pointsBadge}>
-          <Text style={styles.pointsValue}>+{mission.points}</Text>
-          <Text style={styles.pointsLabel}>pts</Text>
-        </View>
-      ) : null}
+      <View style={styles.pointsBadge}>
+        <Text style={styles.pointsValue}>+{mission.points}</Text>
+        <Text style={styles.pointsLabel}>pts</Text>
+      </View>
     </View>
   );
 }
@@ -1609,35 +1610,132 @@ function MissionHistoryCard({ mission, compact = false }: { mission: MissionHist
 function HelperHome({ navigation, route }: any) {
   const rootNavigation = route.params?.rootNavigation ?? navigation;
   const [activeChatRequest, setActiveChatRequest] = useState<Request | null>(null);
+  const [helperTab, setHelperTab] = useState<"open" | "emergency">("open");
+  const emergencyPulse = useRef(new Animated.Value(0)).current;
 
   function acceptRequest(req: Request) {
     setActiveChatRequest(req);
   }
 
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(emergencyPulse, {
+          toValue: 1,
+          duration: 760,
+          useNativeDriver: true,
+        }),
+        Animated.timing(emergencyPulse, {
+          toValue: 0,
+          duration: 760,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [emergencyPulse]);
+
   if (activeChatRequest) {
     return <MissionChat request={activeChatRequest} onBack={() => setActiveChatRequest(null)} />;
   }
+
+  const activeRequests = helperTab === "open" ? nearbyRequests : alertPoolRequests;
+  const dotOpacity = emergencyPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 1],
+  });
 
   return (
     <Screen>
       <FlatList
         ListHeaderComponent={
           <>
-            <BrandHeader mode="Responder mode" onSwitch={() => rootNavigation.navigate("Mode")} />
-            <View style={styles.helperStats}>
-              <Stat label="Open" value="3" />
-              <Stat label="Online" value="27" />
-              <Stat label="Avg ETA" value="4m" />
+            <LinearGradient colors={["#0B67D1", "#0857B6"]} style={styles.helperHero}>
+              <View style={styles.helperHeroTop}>
+                <View style={styles.helperLogoBox}>
+                  <Image source={responcityLogo} style={styles.helperLogoImage} />
+                </View>
+                <View style={styles.helperHeroCopy}>
+                  <Text style={styles.helperEyebrow}>HELPER MODE</Text>
+                  <Text style={styles.helperHeroTitle}>Ready to Help?</Text>
+                </View>
+                <Pressable style={styles.helperSwitchButton} onPress={() => rootNavigation.navigate("Mode")}>
+                  <Ionicons name="swap-horizontal" size={16} color="#fff" />
+                  <Text style={styles.helperSwitchText}>Switch</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.helperSegment}>
+                <Pressable
+                  style={[styles.helperSegmentButton, helperTab === "open" && styles.helperSegmentActive]}
+                  onPress={() => setHelperTab("open")}
+                >
+                  <Text style={[styles.helperSegmentText, helperTab === "open" && styles.helperSegmentTextActive]}>
+                    Open Requests ({nearbyRequests.length})
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.helperSegmentButton, helperTab === "emergency" && styles.helperSegmentActive]}
+                  onPress={() => setHelperTab("emergency")}
+                >
+                  <View style={styles.helperEmergencyLabel}>
+                    <Animated.View style={[styles.emergencyBlinkDot, { opacity: dotOpacity }]} />
+                    <Text style={[styles.helperSegmentText, helperTab === "emergency" && styles.helperSegmentTextActive]}>
+                      Emergency ({alertPoolRequests.length})
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
+            </LinearGradient>
+
+            <View style={styles.helperListHeader}>
+              <Text style={styles.helperListTitle}>{helperTab === "open" ? "Open Requests" : "Emergency Requests"}</Text>
+              <Text style={styles.helperListSub}>{helperTab === "open" ? "People nearby asking for help" : "Highest urgency alerts near you"}</Text>
             </View>
-            <SectionTitle title="Nearby requests" />
           </>
         }
-        data={nearbyRequests}
+        data={activeRequests}
         keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => <RequestCard request={item} onAccept={() => acceptRequest(item)} />}
+        contentContainerStyle={styles.helperListContent}
+        renderItem={({ item }) => <HelperRequestCard request={item} onAccept={() => acceptRequest(item)} />}
       />
     </Screen>
+  );
+}
+
+function HelperRequestCard({ request, onAccept }: { request: Request; onAccept: () => void }) {
+  const cat = categoryFor(request.category);
+  return (
+    <View style={[styles.requestCard, { borderLeftColor: cat.color }, request.urgent && styles.urgentCard]}>
+      {request.buddy ? (
+        <View style={styles.buddyRequestBadge}>
+          <Ionicons name="star" size={12} color="#B45309" />
+          <Text style={styles.buddyRequestText}>BUDDY REQUEST</Text>
+        </View>
+      ) : null}
+      <View style={styles.requestRow}>
+        <View style={[styles.requestIcon, { backgroundColor: cat.bg }]}>
+          <Ionicons name={cat.icon} color={cat.color} size={24} />
+        </View>
+        <View style={styles.requestCopy}>
+          <View style={styles.requestNameRow}>
+            <Text style={styles.requestUserName}>{request.user}</Text>
+            {request.urgent ? (
+              <View style={styles.urgentPill}>
+                <Text style={styles.urgentPillText}>URGENT</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={[styles.requestCategoryText, { color: cat.color }]}>{cat.label.toUpperCase()}</Text>
+          <Text style={styles.requestMessage}>{request.message}</Text>
+          <Text style={styles.metaText}>{request.distance} - {request.timeAgo ?? request.eta}</Text>
+        </View>
+      </View>
+      <Pressable style={styles.acceptButton} onPress={onAccept}>
+        <Text style={styles.acceptButtonText}>I Can Help</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -3059,10 +3157,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 7 },
     elevation: 4,
-    overflow: "hidden",
-  },
-  requestHelpButtonLaunching: {
-    backgroundColor: "#F40012",
   },
   requestHelpButtonDisabled: {
     backgroundColor: "#CBD5E1",
@@ -3073,28 +3167,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "900",
-  },
-  requestButtonLaunchRing: {
-    position: "absolute",
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.42)",
-  },
-  requestButtonLaunchRingSmall: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderColor: "rgba(255,255,255,0.34)",
-  },
-  requestLaunchingContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
   },
   timelineHero: {
     margin: 20,
@@ -3611,10 +3683,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
-  nearbyActivityWrap: {
-    paddingHorizontal: 20,
-    marginTop: 6,
-  },
   missionHistoryCard: {
     minHeight: 112,
     borderRadius: 20,
@@ -3631,11 +3699,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
-  },
-  missionHistoryCardCompact: {
-    minHeight: 94,
-    padding: 13,
-    marginBottom: 10,
   },
   missionHistoryIcon: {
     width: 56,
@@ -3705,68 +3768,122 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 5,
   },
-  personalActivityCard: {
-    minHeight: 112,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
-    padding: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 13,
-    marginBottom: 12,
-    shadowColor: "#14213D",
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-  personalActivityIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  personalActivityCopy: {
-    flex: 1,
-  },
-  personalActivityTitle: {
-    color: "#2D3748",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  personalActivityDetail: {
-    color: "#64748B",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 17,
-    marginTop: 4,
-  },
-  personalActivityDate: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "800",
-    marginTop: 5,
-  },
-  personalStatusPill: {
-    borderRadius: 999,
-    backgroundColor: "#EAF8ED",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  personalStatusText: {
-    color: "#2E7D32",
-    fontSize: 10,
-    fontWeight: "900",
-    textTransform: "uppercase",
-  },
   helperStats: {
     flexDirection: "row",
     gap: 10,
     paddingHorizontal: 20,
     paddingTop: 18,
+  },
+  helperHero: {
+    paddingHorizontal: 18,
+    paddingTop: 26,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  helperHeroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  helperLogoBox: {
+    width: 54,
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  helperLogoImage: {
+    width: 54,
+    height: 54,
+    resizeMode: "cover",
+  },
+  helperHeroCopy: {
+    flex: 1,
+  },
+  helperEyebrow: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.3,
+  },
+  helperHeroTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  helperSwitchButton: {
+    height: 56,
+    borderRadius: 16,
+    paddingHorizontal: 13,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  helperSwitchText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  helperSegment: {
+    minHeight: 58,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    flexDirection: "row",
+    padding: 5,
+    gap: 6,
+    marginTop: 22,
+  },
+  helperSegmentButton: {
+    flex: 1,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helperSegmentActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  helperSegmentText: {
+    color: "rgba(255,255,255,0.84)",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  helperSegmentTextActive: {
+    color: "#1E3A8A",
+  },
+  helperEmergencyLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  emergencyBlinkDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FF1744",
+  },
+  helperListHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 10,
+  },
+  helperListTitle: {
+    color: "#2D3748",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  helperListSub: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+  helperListContent: {
+    paddingBottom: 28,
   },
   stat: {
     flex: 1,
@@ -3796,6 +3913,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: theme.border,
+    borderLeftWidth: 4,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   urgentCard: {
     borderColor: "rgba(255,23,68,0.35)",
@@ -3821,6 +3944,55 @@ const styles = StyleSheet.create({
   requestCopy: {
     flex: 1,
   },
+  requestNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 3,
+  },
+  requestUserName: {
+    color: "#2D3748",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  urgentPill: {
+    borderRadius: 9,
+    backgroundColor: "#FFE2E8",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  urgentPillText: {
+    color: theme.red,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  buddyRequestBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 10,
+    backgroundColor: "#FFF2D8",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 11,
+  },
+  buddyRequestText: {
+    color: "#B45309",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  requestCategoryText: {
+    fontSize: 12,
+    fontWeight: "900",
+    marginBottom: 6,
+  },
+  requestMessage: {
+    color: "#64748B",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
   metaText: {
     color: theme.orange,
     fontSize: 12,
@@ -3828,10 +4000,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   acceptButton: {
-    backgroundColor: theme.green,
+    backgroundColor: "#075FBE",
     borderRadius: 15,
-    padding: 13,
+    minHeight: 56,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: 14,
   },
   acceptButtonText: {
