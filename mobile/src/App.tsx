@@ -3,7 +3,9 @@ import {
   Alert,
   Animated,
   FlatList,
+  GestureResponderEvent,
   Image,
+  LayoutChangeEvent,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -92,6 +94,28 @@ type PersonalActivityItem = {
   status: "completed" | "active" | "cancelled";
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
+};
+
+type CommunityPost = {
+  id: string;
+  author: string;
+  org?: string;
+  official?: boolean;
+  rating?: string;
+  time: string;
+  message: string;
+  likes: number;
+  color: string;
+};
+
+type GroupMission = {
+  id: string;
+  title: string;
+  org: string;
+  location: string;
+  need: string;
+  slots: string;
+  urgent: boolean;
 };
 
 type LegalSection = {
@@ -307,6 +331,78 @@ const personalActivity: PersonalActivityItem[] = [
   },
 ];
 
+const helperOrganisation = {
+  name: "Red Cross District 5",
+  type: "NGO",
+  role: "Verified Community Helper",
+  joined: "Mar 2026",
+  coordinator: "Anita Rao",
+  coverage: "5.2 km active response area",
+  verifiedBy: "Responcity Trust Network",
+};
+
+const communityFeed: CommunityPost[] = [
+  {
+    id: "c1",
+    author: "Jordan K.",
+    org: "Red Cross",
+    rating: "4.9",
+    time: "2h ago",
+    message: "Just helped 3 neighbors during the storm. Amazing community spirit - Responcity works!",
+    likes: 24,
+    color: "#F45A3D",
+  },
+  {
+    id: "c2",
+    author: "Community",
+    official: true,
+    time: "5h ago",
+    message: "District 5 helper network has reached 500 active members. Thank you all.",
+    likes: 67,
+    color: "#1652B7",
+  },
+  {
+    id: "c3",
+    author: "Priya S.",
+    org: "St. John Ambulance",
+    rating: "4.8",
+    time: "8h ago",
+    message: "Completed my 40th mission today. Every small act of help creates a ripple of good.",
+    likes: 31,
+    color: "#FF6B35",
+  },
+];
+
+const communityGroupMissions: GroupMission[] = [
+  {
+    id: "g1",
+    title: "Storm Response Team",
+    org: "Red Cross District 5",
+    location: "Oak Street area",
+    need: "Need 4 helpers for elderly resident checks",
+    slots: "2/6 joined",
+    urgent: true,
+  },
+  {
+    id: "g2",
+    title: "Blood Camp Volunteers",
+    org: "LifeTrust Foundation",
+    location: "City Hospital",
+    need: "Registration desk and donor escort support",
+    slots: "5/10 joined",
+    urgent: false,
+  },
+  {
+    id: "g3",
+    title: "Night Safety Escort",
+    org: "SafeWalk Trust",
+    location: "Metro parking zone",
+    need: "Verified helpers for 8 PM - 11 PM shift",
+    slots: "3/5 joined",
+    urgent: false,
+  },
+];
+
 const defaultEmergencySession: EmergencySession = {
   unlocked: false,
   buddiesNotified: false,
@@ -380,6 +476,17 @@ const requestPresetMessagesByCategory: Record<string, string[]> = {
     "Need first aid",
     "Need urgent location sharing",
   ],
+};
+
+const urgencyDemoExamples: Record<string, { user: number; admin: number; example: string }> = {
+  medical: { user: 8, admin: 10, example: "Chest pain with breathing trouble" },
+  transport: { user: 5, admin: 4, example: "Flat tyre, parked safely off-road" },
+  home: { user: 7, admin: 9, example: "Gas smell inside apartment" },
+  blood: { user: 9, admin: 8, example: "O- blood needed for hospital patient" },
+  mental: { user: 7, admin: 8, example: "Panic attack, alone at night" },
+  "lost-found": { user: 6, admin: 9, example: "Lost child found near bus stop" },
+  safety: { user: 9, admin: 10, example: "Being followed in an unsafe area" },
+  accident: { user: 8, admin: 9, example: "Road accident with visible injury" },
 };
 
 const aboutSections: LegalSection[] = [
@@ -912,6 +1019,8 @@ function RequestDetailsScreen({ navigation, route }: any) {
   const [moreDetails, setMoreDetails] = useState("");
   const [customDescription, setCustomDescription] = useState("");
   const [proofAsset, setProofAsset] = useState<ProofAsset | null>(null);
+  const [userUrgency, setUserUrgency] = useState(0);
+  const [urgencyTrackWidth, setUrgencyTrackWidth] = useState(0);
   const [confirmed, setConfirmed] = useState(false);
   const [customMessageOpen, setCustomMessageOpen] = useState(false);
   const [requestLaunching, setRequestLaunching] = useState(false);
@@ -1002,10 +1111,22 @@ function RequestDetailsScreen({ navigation, route }: any) {
   const finalDescription = customMessageOpen
     ? customDescription.trim()
     : [selectedPreset, moreDetails.trim()].filter(Boolean).join(" - ");
-  const canSubmit = confirmed && finalDescription.length > 0 && (customMessageOpen || moreDetails.trim().length > 0);
+  const canSubmit = confirmed && userUrgency > 0 && finalDescription.length > 0 && (customMessageOpen || moreDetails.trim().length > 0);
   const charCount = customMessageOpen
     ? customDescription.length
     : selectedPreset.length + (moreDetails.trim().length > 0 ? 3 + moreDetails.length : moreDetails.length);
+  const urgencyExample = urgencyDemoExamples[category.id] ?? urgencyDemoExamples.safety;
+
+  function updateUrgencyFromTouch(event: GestureResponderEvent) {
+    if (urgencyTrackWidth <= 0) return;
+    const x = Math.max(0, Math.min(event.nativeEvent.locationX, urgencyTrackWidth));
+    const nextValue = Math.max(1, Math.min(10, Math.round((x / urgencyTrackWidth) * 9 + 1)));
+    setUserUrgency(nextValue);
+  }
+
+  function handleUrgencyTrackLayout(event: LayoutChangeEvent) {
+    setUrgencyTrackWidth(event.nativeEvent.layout.width);
+  }
 
   return (
     <Screen>
@@ -1128,6 +1249,50 @@ function RequestDetailsScreen({ navigation, route }: any) {
             </View>
           ) : null}
           <Text style={styles.charCount}>{charCount}/300</Text>
+
+          <Text style={styles.detailLabel}>How urgent is it? <Text style={styles.required}>*</Text></Text>
+          <Text style={styles.presetHint}>Your rating helps triage faster. Admin will review and finalize urgency.</Text>
+          <View style={styles.urgencySliderCard}>
+            <View style={styles.urgencyValueRow}>
+              <Text style={styles.urgencyValueLabel}>User urgency</Text>
+              <Text style={styles.urgencyValue}>{userUrgency > 0 ? `${userUrgency}/10` : "Set level"}</Text>
+            </View>
+            <View
+              style={styles.urgencySliderTrack}
+              onLayout={handleUrgencyTrackLayout}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={updateUrgencyFromTouch}
+              onResponderMove={updateUrgencyFromTouch}
+            >
+              <View style={[styles.urgencySliderFill, { width: `${userUrgency > 0 ? ((userUrgency - 1) / 9) * 100 : 0}%` }]} />
+              <View style={[styles.urgencySliderThumb, { left: `${userUrgency > 0 ? ((userUrgency - 1) / 9) * 100 : 0}%` }]} />
+            </View>
+            <View style={styles.urgencySliderLabels}>
+              <Text style={styles.urgencySliderLabel}>1 Low</Text>
+              <Text style={styles.urgencySliderLabel}>10 Critical</Text>
+            </View>
+          </View>
+          <View style={styles.urgencyReviewCard}>
+            <View style={styles.urgencyReviewHeader}>
+              <Ionicons name="shield-checkmark" size={17} color="#1652B7" />
+              <Text style={styles.urgencyReviewTitle}>Admin finalizes urgency</Text>
+            </View>
+            <Text style={styles.urgencyReviewText}>
+              Demo: {urgencyExample.example}
+            </Text>
+            <View style={styles.urgencyReviewRow}>
+              <View style={styles.urgencyReviewPill}>
+                <Text style={styles.urgencyReviewPillLabel}>User</Text>
+                <Text style={styles.urgencyReviewPillValue}>{urgencyExample.user}/10</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color="#64748B" />
+              <View style={[styles.urgencyReviewPill, styles.urgencyReviewAdminPill]}>
+                <Text style={styles.urgencyReviewPillLabel}>Admin</Text>
+                <Text style={styles.urgencyReviewPillValue}>{urgencyExample.admin}/10</Text>
+              </View>
+            </View>
+          </View>
 
           <Pressable style={styles.confirmBox} onPress={() => setConfirmed(value => !value)}>
             <View style={[styles.checkboxBox, confirmed && styles.checkboxChecked]}>
@@ -1643,7 +1808,15 @@ function HelperHome({ navigation, route }: any) {
   const activeRequests = helperTab === "open" ? nearbyRequests : alertPoolRequests;
   const dotOpacity = emergencyPulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.35, 1],
+    outputRange: [0.55, 1],
+  });
+  const dotRingScale = emergencyPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.75, 2.35],
+  });
+  const dotRingOpacity = emergencyPulse.interpolate({
+    inputRange: [0, 0.65, 1],
+    outputRange: [0.6, 0.22, 0],
   });
 
   return (
@@ -1680,7 +1853,16 @@ function HelperHome({ navigation, route }: any) {
                   onPress={() => setHelperTab("emergency")}
                 >
                   <View style={styles.helperEmergencyLabel}>
-                    <Animated.View style={[styles.emergencyBlinkDot, { opacity: dotOpacity }]} />
+                    <View style={styles.emergencyPulseWrap}>
+                      <Animated.View
+                        pointerEvents="none"
+                        style={[
+                          styles.emergencyPulseRing,
+                          { opacity: dotRingOpacity, transform: [{ scale: dotRingScale }] },
+                        ]}
+                      />
+                      <Animated.View style={[styles.emergencyBlinkDot, { opacity: dotOpacity }]} />
+                    </View>
                     <Text style={[styles.helperSegmentText, helperTab === "emergency" && styles.helperSegmentTextActive]}>
                       Emergency ({alertPoolRequests.length})
                     </Text>
@@ -1856,36 +2038,141 @@ function RequestCard({ request, onAccept }: { request: Request; onAccept: () => 
 }
 
 function ResponderMap() {
+  const [communityTab, setCommunityTab] = useState<"feed" | "groups">("feed");
+
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <BrandHeader mode="Responder map" />
-        <View style={styles.mapMock}>
-          {nearbyRequests.map((req, index) => {
-            const cat = categoryFor(req.category);
-            return (
-              <View
-                key={req.id}
-                style={[
-                  styles.mapPin,
-                  {
-                    left: `${22 + index * 26}%`,
-                    top: `${28 + (index % 2) * 34}%`,
-                    backgroundColor: cat.color,
-                  },
-                ]}
-              >
-                <Ionicons name={cat.icon} color="#fff" size={18} />
-              </View>
-            );
-          })}
-          <View style={styles.youPin}>
-            <Ionicons name="person" color="#fff" size={18} />
+      <ScrollView contentContainerStyle={styles.communityScroll}>
+        <Text style={styles.communityTitle}>Community</Text>
+
+        <View style={styles.communitySlider}>
+          <View style={[styles.communitySliderThumb, communityTab === "groups" && styles.communitySliderThumbRight]} />
+          <Pressable style={styles.communitySliderOption} onPress={() => setCommunityTab("feed")}>
+            <Text style={[styles.communitySliderText, communityTab === "feed" && styles.communitySliderTextActive]}>Feed</Text>
+          </Pressable>
+          <Pressable style={styles.communitySliderOption} onPress={() => setCommunityTab("groups")}>
+            <Text style={[styles.communitySliderText, communityTab === "groups" && styles.communitySliderTextActive]}>Group Missions</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.orgInfoCard}>
+          <View style={styles.orgInfoHeader}>
+            <View style={styles.orgMark}>
+              <Ionicons name="ribbon" size={24} color="#1652B7" />
+            </View>
+            <View style={styles.orgInfoCopy}>
+              <Text style={styles.orgName}>{helperOrganisation.name}</Text>
+              <Text style={styles.orgRole}>{helperOrganisation.role}</Text>
+            </View>
+            <View style={styles.orgTypePill}>
+              <Text style={styles.orgTypeText}>{helperOrganisation.type}</Text>
+            </View>
+          </View>
+          <View style={styles.orgMetaGrid}>
+            <OrgMeta icon="calendar" label="Joined" value={helperOrganisation.joined} />
+            <OrgMeta icon="person" label="Coordinator" value={helperOrganisation.coordinator} />
+            <OrgMeta icon="navigate" label="Coverage" value={helperOrganisation.coverage} />
+            <OrgMeta icon="shield-checkmark" label="Verified by" value={helperOrganisation.verifiedBy} />
           </View>
         </View>
-        <Text style={styles.helpText}>Map is mocked for demo. Later we connect Google Maps/Mapbox and live Firebase locations.</Text>
+
+        {communityTab === "feed" ? (
+          <>
+            <View style={styles.communityTrustCard}>
+              <CommunityTrustLine icon="shield-checkmark" text="Verified by NGO, NPO, trust or trusted organisation" />
+              <CommunityTrustLine icon="star" text="Community helper rating and mission reputation shown" />
+            </View>
+            {communityFeed.map(post => <CommunityPostCard key={post.id} post={post} />)}
+          </>
+        ) : (
+          <>
+            {communityGroupMissions.map(mission => <GroupMissionCard key={mission.id} mission={mission} />)}
+          </>
+        )}
       </ScrollView>
     </Screen>
+  );
+}
+
+function OrgMeta({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+  return (
+    <View style={styles.orgMetaItem}>
+      <Ionicons name={icon} size={15} color="#1652B7" />
+      <Text style={styles.orgMetaLabel}>{label}</Text>
+      <Text style={styles.orgMetaValue}>{value}</Text>
+    </View>
+  );
+}
+
+function CommunityTrustLine({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  return (
+    <View style={styles.communityTrustLine}>
+      <Ionicons name={icon} size={16} color="#1652B7" />
+      <Text style={styles.communityTrustText}>{text}</Text>
+    </View>
+  );
+}
+
+function CommunityPostCard({ post }: { post: CommunityPost }) {
+  return (
+    <View style={styles.communityPostCard}>
+      <View style={styles.communityPostHeader}>
+        <View style={[styles.communityAvatar, { backgroundColor: post.color }]}>
+          <Text style={styles.communityAvatarText}>{post.author.slice(0, 1)}</Text>
+        </View>
+        <View style={styles.communityPostCopy}>
+          <View style={styles.communityNameRow}>
+            <Text style={styles.communityAuthor}>{post.author}</Text>
+            {post.rating ? <Text style={styles.communityRating}>★ {post.rating}</Text> : null}
+          </View>
+          <Text style={styles.communityTime}>{post.time}</Text>
+          {post.org ? (
+            <View style={styles.communityOrgPill}>
+              <Ionicons name="ribbon" size={12} color="#1652B7" />
+              <Text style={styles.communityOrgText}>{post.org}</Text>
+            </View>
+          ) : null}
+        </View>
+        {post.official ? (
+          <View style={styles.officialPill}>
+            <Text style={styles.officialText}>Official</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.communityMessage}>{post.message}</Text>
+      <View style={styles.communityLikeRow}>
+        <Ionicons name="heart-outline" size={16} color="#64748B" />
+        <Text style={styles.communityLikes}>{post.likes}</Text>
+      </View>
+    </View>
+  );
+}
+
+function GroupMissionCard({ mission }: { mission: GroupMission }) {
+  return (
+    <View style={[styles.groupMissionCard, mission.urgent && styles.groupMissionUrgent]}>
+      <View style={styles.groupMissionHeader}>
+        <View style={styles.groupMissionIcon}>
+          <Ionicons name="people" size={22} color="#1652B7" />
+        </View>
+        <View style={styles.groupMissionCopy}>
+          <View style={styles.communityNameRow}>
+            <Text style={styles.groupMissionTitle}>{mission.title}</Text>
+            {mission.urgent ? (
+              <View style={styles.urgentPill}>
+                <Text style={styles.urgentPillText}>URGENT</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.groupMissionOrg}>{mission.org}</Text>
+        </View>
+      </View>
+      <Text style={styles.groupMissionNeed}>{mission.need}</Text>
+      <View style={styles.groupMissionFooter}>
+        <Text style={styles.groupMissionMeta}>{mission.location}</Text>
+        <Text style={styles.groupMissionSlots}>{mission.slots}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -3100,6 +3387,124 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 18,
   },
+  urgencySliderCard: {
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.1)",
+    padding: 14,
+    marginBottom: 14,
+  },
+  urgencyValueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  urgencyValueLabel: {
+    color: "#374151",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  urgencyValue: {
+    color: theme.red,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  urgencySliderTrack: {
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    overflow: "visible",
+  },
+  urgencySliderFill: {
+    position: "absolute",
+    left: 0,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: theme.red,
+  },
+  urgencySliderThumb: {
+    position: "absolute",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginLeft: -14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 4,
+    borderColor: theme.red,
+    shadowColor: theme.red,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  urgencySliderLabels: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  urgencySliderLabel: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  urgencyReviewCard: {
+    borderRadius: 16,
+    backgroundColor: "#EEF4FF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.14)",
+    padding: 13,
+    marginBottom: 18,
+  },
+  urgencyReviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  urgencyReviewTitle: {
+    color: "#1E3A8A",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  urgencyReviewText: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginTop: 8,
+  },
+  urgencyReviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 12,
+  },
+  urgencyReviewPill: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 13,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  urgencyReviewAdminPill: {
+    backgroundColor: "#FFE2E8",
+  },
+  urgencyReviewPillLabel: {
+    color: "#64748B",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.7,
+  },
+  urgencyReviewPillValue: {
+    color: "#1E3A8A",
+    fontSize: 15,
+    fontWeight: "900",
+    marginTop: 2,
+  },
   confirmBox: {
     borderRadius: 16,
     borderWidth: 1.2,
@@ -3860,11 +4265,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 7,
   },
+  emergencyPulseWrap: {
+    width: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emergencyPulseRing: {
+    position: "absolute",
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 0, 0, 0.42)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.6)",
+  },
   emergencyBlinkDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#FF1744",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#FF0000",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
   },
   helperListHeader: {
     paddingHorizontal: 20,
@@ -4009,6 +4431,304 @@ const styles = StyleSheet.create({
   },
   acceptButtonText: {
     color: "#fff",
+    fontWeight: "900",
+  },
+  communityScroll: {
+    paddingHorizontal: 18,
+    paddingTop: 34,
+    paddingBottom: 34,
+  },
+  communityTitle: {
+    color: "#2D3748",
+    fontSize: 31,
+    fontWeight: "800",
+    marginBottom: 18,
+  },
+  communitySlider: {
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: "#E5E7EB",
+    flexDirection: "row",
+    padding: 5,
+    marginBottom: 18,
+    position: "relative",
+  },
+  communitySliderThumb: {
+    position: "absolute",
+    left: 5,
+    top: 5,
+    bottom: 5,
+    width: "49%",
+    borderRadius: 13,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#14213D",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  communitySliderThumbRight: {
+    left: "50%",
+  },
+  communitySliderOption: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  communitySliderText: {
+    color: "#64748B",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  communitySliderTextActive: {
+    color: "#2D3748",
+  },
+  orgInfoCard: {
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 16,
+    marginBottom: 16,
+  },
+  orgInfoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  orgMark: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: "#EEF4FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orgInfoCopy: {
+    flex: 1,
+  },
+  orgName: {
+    color: "#2D3748",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  orgRole: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+  orgTypePill: {
+    borderRadius: 999,
+    backgroundColor: "#EAF8ED",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  orgTypeText: {
+    color: "#2E7D32",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  orgMetaGrid: {
+    gap: 10,
+    marginTop: 16,
+  },
+  orgMetaItem: {
+    minHeight: 44,
+    borderRadius: 13,
+    backgroundColor: "#F8FAFC",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  orgMetaLabel: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "900",
+    width: 82,
+  },
+  orgMetaValue: {
+    flex: 1,
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  communityTrustCard: {
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 15,
+    marginBottom: 14,
+    gap: 13,
+  },
+  communityTrustLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  communityTrustText: {
+    flex: 1,
+    color: "#475569",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  communityPostCard: {
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 16,
+    marginBottom: 14,
+  },
+  communityPostHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  communityAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  communityAvatarText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  communityPostCopy: {
+    flex: 1,
+  },
+  communityNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  communityAuthor: {
+    color: "#2D3748",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  communityRating: {
+    color: theme.orange,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  communityTime: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  communityOrgPill: {
+    alignSelf: "flex-start",
+    borderRadius: 10,
+    backgroundColor: "#EEF4FF",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 7,
+  },
+  communityOrgText: {
+    color: "#1652B7",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  officialPill: {
+    borderRadius: 10,
+    backgroundColor: "#EAF2F8",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  officialText: {
+    color: "#334155",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  communityMessage: {
+    color: "#334155",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 21,
+    marginTop: 16,
+  },
+  communityLikeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 18,
+  },
+  communityLikes: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  groupMissionCard: {
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 16,
+    marginBottom: 14,
+  },
+  groupMissionUrgent: {
+    borderColor: "rgba(255, 23, 68, 0.3)",
+  },
+  groupMissionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  groupMissionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: "#EEF4FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  groupMissionCopy: {
+    flex: 1,
+  },
+  groupMissionTitle: {
+    color: "#2D3748",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  groupMissionOrg: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+  groupMissionNeed: {
+    color: "#334155",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginTop: 14,
+  },
+  groupMissionFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 14,
+  },
+  groupMissionMeta: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  groupMissionSlots: {
+    color: "#1652B7",
+    fontSize: 12,
     fontWeight: "900",
   },
   chatScreen: {
