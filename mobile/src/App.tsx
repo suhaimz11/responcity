@@ -25,6 +25,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 
 type RootStackParamList = {
+  Login: undefined;
   Mode: undefined;
   RequesterTabs: undefined;
   HelperTabs: undefined;
@@ -53,6 +54,20 @@ type Request = {
   urgent: boolean;
   buddy?: boolean;
   timeAgo?: string;
+};
+
+type DemoUserRole = "user" | "admin";
+
+type DemoUser = {
+  name: string;
+  email: string;
+  role: DemoUserRole;
+};
+
+type PendingHelpRequest = Request & {
+  submittedAt: string;
+  userUrgency: number;
+  proofType?: ProofAsset["type"];
 };
 
 type CheckInStatus = "locked" | "ready" | "active" | "sos" | "review" | "thanks";
@@ -134,20 +149,60 @@ type AppThemeContextValue = {
   setMode: (mode: AppThemeMode) => void;
 };
 
+type AuthContextValue = {
+  user: DemoUser | null;
+  login: (identifier: string, password: string) => DemoUser;
+  signup: (name: string, email: string, password: string) => DemoUser;
+  logout: () => void;
+};
+
+type RequestReviewContextValue = {
+  pendingRequests: PendingHelpRequest[];
+  approvedRequests: Request[];
+  submitForReview: (request: Omit<PendingHelpRequest, "id" | "submittedAt" | "distance" | "eta" | "timeAgo">) => void;
+  approveRequest: (id: string) => void;
+  rejectRequest: (id: string) => void;
+};
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 const emergeAidLogo = require("../assets/emerge-aid-logo-transparent-cropped.png");
 const emergeAidSplash = require("../assets/emerge-aid-splash-transparent.png");
 const contactEmail = "imailemergeaid@gmail.com";
+const hardcodedAdmins = [
+  { name: "Suhaim", email: "suhaim@emergeaid.demo", username: "suhaim", password: "Hajeeb" },
+  { name: "Abdulla", email: "abdulla@emergeaid.demo", username: "abdulla", password: "Hajeeb" },
+];
 
 const AppThemeContext = createContext<AppThemeContextValue>({
   mode: "light",
   isDark: false,
   setMode: () => {},
 });
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  login: () => ({ name: "Demo User", email: "demo@emergeaid.app", role: "user" }),
+  signup: () => ({ name: "Demo User", email: "demo@emergeaid.app", role: "user" }),
+  logout: () => {},
+});
+const RequestReviewContext = createContext<RequestReviewContextValue>({
+  pendingRequests: [],
+  approvedRequests: [],
+  submitForReview: () => {},
+  approveRequest: () => {},
+  rejectRequest: () => {},
+});
 
 function useAppTheme() {
   return useContext(AppThemeContext);
+}
+
+function useAuth() {
+  return useContext(AuthContext);
+}
+
+function useRequestReview() {
+  return useContext(RequestReviewContext);
 }
 
 const theme = {
@@ -748,6 +803,7 @@ function HomeStat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap
 }
 
 function RequesterTabs({ navigation, route }: any) {
+  const { user } = useAuth();
   const [session, setSession] = useState<EmergencySession>(defaultEmergencySession);
   const lastUnlockToken = useRef<number | null>(null);
 
@@ -785,11 +841,16 @@ function RequesterTabs({ navigation, route }: any) {
         {props => <SafeCheckIn {...props} session={session} setSession={setSession} />}
       </Tab.Screen>
       <Tab.Screen name="Activity" component={MissionHistoryScreen} options={{ tabBarIcon: tabIcon("pulse") }} />
+      {user?.role === "admin" ? (
+        <Tab.Screen name="Admin" component={AdminDashboardScreen} options={{ tabBarIcon: tabIcon("shield-checkmark") }} />
+      ) : null}
     </Tab.Navigator>
   );
 }
 
 function HelperTabs({ navigation }: any) {
+  const { user } = useAuth();
+
   return (
     <Tab.Navigator screenOptions={tabOptions}>
       <Tab.Screen
@@ -800,6 +861,9 @@ function HelperTabs({ navigation }: any) {
       />
       <Tab.Screen name="Community" component={ResponderMap} options={{ tabBarIcon: tabIcon("people") }} />
       <Tab.Screen name="Rankings" component={ResponderStats} options={{ tabBarIcon: tabIcon("trophy") }} />
+      {user?.role === "admin" ? (
+        <Tab.Screen name="Admin" component={AdminDashboardScreen} options={{ tabBarIcon: tabIcon("shield-checkmark") }} />
+      ) : null}
     </Tab.Navigator>
   );
 }
@@ -1028,6 +1092,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
 
 function RequestDetailsScreen({ navigation, route }: any) {
   const category = categoryFor(route.params?.categoryId ?? "medical");
+  const { submitForReview } = useRequestReview();
   const categoryPresets = requestPresetMessagesByCategory[category.id] ?? requestPresetMessagesByCategory.safety;
   const [selectedPreset, setSelectedPreset] = useState("");
   const [moreDetails, setMoreDetails] = useState("");
@@ -1083,6 +1148,15 @@ function RequestDetailsScreen({ navigation, route }: any) {
   });
 
   function submitRequest() {
+    submitForReview({
+      user: "Demo User",
+      category: category.id,
+      message: finalDescription,
+      urgent: userUrgency >= 8,
+      buddy: false,
+      userUrgency,
+      proofType: proofAsset?.type,
+    });
     setRequestLaunching(true);
     setTimeout(() => {
       setRequestLaunching(false);
@@ -1788,6 +1862,7 @@ function MissionHistoryCard({ mission }: { mission: MissionHistoryItem }) {
 
 function HelperHome({ navigation, route }: any) {
   const rootNavigation = route.params?.rootNavigation ?? navigation;
+  const { approvedRequests } = useRequestReview();
   const [activeChatRequest, setActiveChatRequest] = useState<Request | null>(null);
   const [helperTab, setHelperTab] = useState<"open" | "emergency">("open");
   const emergencyPulse = useRef(new Animated.Value(0)).current;
@@ -1819,7 +1894,8 @@ function HelperHome({ navigation, route }: any) {
     return <MissionChat request={activeChatRequest} onBack={() => setActiveChatRequest(null)} />;
   }
 
-  const activeRequests = helperTab === "open" ? nearbyRequests : alertPoolRequests;
+  const openRequests = [...approvedRequests, ...nearbyRequests];
+  const activeRequests = helperTab === "open" ? openRequests : alertPoolRequests;
   const dotOpacity = emergencyPulse.interpolate({
     inputRange: [0, 1],
     outputRange: [0.55, 1],
@@ -1859,7 +1935,7 @@ function HelperHome({ navigation, route }: any) {
                   onPress={() => setHelperTab("open")}
                 >
                   <Text style={[styles.helperSegmentText, helperTab === "open" && styles.helperSegmentTextActive]}>
-                    Open Requests ({nearbyRequests.length})
+                    Open Requests ({openRequests.length})
                   </Text>
                 </Pressable>
                 <Pressable
@@ -2299,8 +2375,171 @@ function PrivacyPolicyScreen({ navigation }: any) {
   );
 }
 
+function LoginScreen({ navigation }: any) {
+  const { login, signup } = useAuth();
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [name, setName] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+
+  function continueWith(user: DemoUser) {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Mode" }],
+    });
+  }
+
+  function submitAuth() {
+    const cleanIdentifier = identifier.trim();
+    const cleanName = name.trim();
+    if (!cleanIdentifier || !password.trim() || (mode === "signup" && !cleanName)) {
+      Alert.alert("Missing details", mode === "signup" ? "Enter your name, email, and password." : "Enter username/email and password.");
+      return;
+    }
+
+    const user = mode === "signup"
+      ? signup(cleanName, cleanIdentifier, password)
+      : login(cleanIdentifier, password);
+    continueWith(user);
+  }
+
+  return (
+    <Screen>
+      <StatusBar style="dark" />
+      <ScrollView contentContainerStyle={styles.authScroll}>
+        <Image source={emergeAidLogo} style={styles.authLogo} />
+        <Text style={styles.authTitle}>Welcome to Emerge Aid</Text>
+        <Text style={styles.authSub}>Sign in to request help, respond nearby, or review emergency posts.</Text>
+
+        <View style={styles.authCard}>
+          <View style={styles.authModeSwitch}>
+            <Pressable style={[styles.authModeButton, mode === "login" && styles.authModeButtonActive]} onPress={() => setMode("login")}>
+              <Text style={[styles.authModeText, mode === "login" && styles.authModeTextActive]}>Login</Text>
+            </Pressable>
+            <Pressable style={[styles.authModeButton, mode === "signup" && styles.authModeButtonActive]} onPress={() => setMode("signup")}>
+              <Text style={[styles.authModeText, mode === "signup" && styles.authModeTextActive]}>Sign Up</Text>
+            </Pressable>
+          </View>
+
+          {mode === "signup" ? (
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Full name"
+              placeholderTextColor="#8B95A1"
+              style={styles.authInput}
+            />
+          ) : null}
+          <TextInput
+            value={identifier}
+            onChangeText={setIdentifier}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="Username or email"
+            placeholderTextColor="#8B95A1"
+            style={styles.authInput}
+          />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="Password"
+            placeholderTextColor="#8B95A1"
+            style={styles.authInput}
+          />
+
+          <Pressable style={styles.authSubmitButton} onPress={submitAuth}>
+            <Text style={styles.authSubmitText}>{mode === "signup" ? "Create Demo Account" : "Login"}</Text>
+          </Pressable>
+
+        </View>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+function AdminDashboardScreen({ navigation }: any) {
+  const { user, logout } = useAuth();
+  const { pendingRequests, approveRequest, rejectRequest } = useRequestReview();
+
+  function leaveAdmin() {
+    logout();
+    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  }
+
+  return (
+    <Screen>
+      <StatusBar style="light" />
+      <FlatList
+        ListHeaderComponent={
+          <>
+            <LinearGradient colors={["#14213D", "#0B67D1"]} style={styles.adminHero}>
+              <View style={styles.adminHeroTop}>
+                <View>
+                  <Text style={styles.adminEyebrow}>ADMIN REVIEW</Text>
+                  <Text style={styles.adminTitle}>Verify Help Requests</Text>
+                  <Text style={styles.adminSub}>{user?.name ?? "Admin"} approves posts before helpers see them.</Text>
+                </View>
+                <Pressable style={styles.adminLogoutButton} onPress={leaveAdmin}>
+                  <Ionicons name="log-out-outline" size={18} color="#fff" />
+                </Pressable>
+              </View>
+            </LinearGradient>
+            <View style={styles.adminSummaryCard}>
+              <Ionicons name="shield-checkmark" size={22} color="#1652B7" />
+              <Text style={styles.adminSummaryText}>{pendingRequests.length} pending verification</Text>
+            </View>
+          </>
+        }
+        data={pendingRequests}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.adminList}
+        ListEmptyComponent={
+          <View style={styles.adminEmptyCard}>
+            <Ionicons name="checkmark-done-circle" size={34} color={theme.green} />
+            <Text style={styles.adminEmptyTitle}>No pending requests</Text>
+            <Text style={styles.adminEmptySub}>New help requests will appear here before going live.</Text>
+          </View>
+        }
+        renderItem={({ item }) => {
+          const cat = categoryFor(item.category);
+          return (
+            <View style={styles.adminRequestCard}>
+              <View style={styles.adminRequestHeader}>
+                <View style={[styles.adminRequestIcon, { backgroundColor: cat.bg }]}>
+                  <Ionicons name={cat.icon} size={22} color={cat.color} />
+                </View>
+                <View style={styles.adminRequestCopy}>
+                  <Text style={styles.adminRequestUser}>{item.user}</Text>
+                  <Text style={[styles.adminRequestCategory, { color: cat.color }]}>{cat.label.toUpperCase()} - user urgency {item.userUrgency}/10</Text>
+                </View>
+              </View>
+              <Text style={styles.adminRequestMessage}>{item.message}</Text>
+              <Text style={styles.adminRequestMeta}>Proof: {item.proofType ?? "not attached"} - Submitted {item.submittedAt}</Text>
+              <View style={styles.adminActionRow}>
+                <Pressable style={[styles.adminActionButton, styles.adminRejectButton]} onPress={() => rejectRequest(item.id)}>
+                  <Text style={styles.adminRejectText}>Reject</Text>
+                </Pressable>
+                <Pressable style={[styles.adminActionButton, styles.adminApproveButton]} onPress={() => approveRequest(item.id)}>
+                  <Text style={styles.adminApproveText}>Approve & Publish</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        }}
+      />
+    </Screen>
+  );
+}
+
 function SettingsScreen({ navigation }: any) {
   const { isDark, setMode } = useAppTheme();
+  const { logout } = useAuth();
+
+  function signOut() {
+    logout();
+    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  }
 
   return (
     <Screen dark={isDark}>
@@ -2360,6 +2599,11 @@ function SettingsScreen({ navigation }: any) {
           </Text>
           <Text style={styles.settingsContactEmail}>{contactEmail}</Text>
         </View>
+
+        <Pressable style={({ pressed }) => [styles.settingsLogoutButton, pressed && styles.categoryPressed]} onPress={signOut}>
+          <Ionicons name="log-out-outline" size={18} color="#E11D48" />
+          <Text style={styles.settingsLogoutText}>Log out</Text>
+        </Pressable>
       </ScrollView>
     </Screen>
   );
@@ -2395,6 +2639,9 @@ function SettingsLink({
 export default function App() {
   const [showStartup, setShowStartup] = useState(true);
   const [themeMode, setThemeMode] = useState<AppThemeMode>("light");
+  const [user, setUser] = useState<DemoUser | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<PendingHelpRequest[]>([]);
+  const [approvedRequests, setApprovedRequests] = useState<Request[]>([]);
   const isDark = themeMode === "dark";
 
   useEffect(() => {
@@ -2406,20 +2653,85 @@ export default function App() {
     return <StartupScreen />;
   }
 
+  function login(identifier: string, password: string) {
+    const cleanIdentifier = identifier.trim().toLowerCase();
+    const admin = hardcodedAdmins.find(
+      account => (account.email.toLowerCase() === cleanIdentifier || account.username.toLowerCase() === cleanIdentifier) && account.password === password,
+    );
+    const nextUser: DemoUser = admin
+      ? { name: admin.name, email: admin.email, role: "admin" }
+      : { name: cleanIdentifier.includes("@") ? cleanIdentifier.split("@")[0] : cleanIdentifier, email: cleanIdentifier, role: "user" };
+    setUser(nextUser);
+    return nextUser;
+  }
+
+  function signup(name: string, email: string, _password: string) {
+    const nextUser: DemoUser = { name: name.trim(), email: email.trim().toLowerCase(), role: "user" };
+    setUser(nextUser);
+    return nextUser;
+  }
+
+  function logout() {
+    setUser(null);
+  }
+
+  function submitForReview(request: Omit<PendingHelpRequest, "id" | "submittedAt" | "distance" | "eta" | "timeAgo">) {
+    const pendingRequest: PendingHelpRequest = {
+      ...request,
+      id: `demo-${Date.now()}`,
+      distance: "0.4 mi",
+      eta: "3 min",
+      timeAgo: "just now",
+      submittedAt: "just now",
+    };
+    setPendingRequests(current => [pendingRequest, ...current]);
+  }
+
+  function approveRequest(id: string) {
+    setPendingRequests(current => {
+      const approved = current.find(item => item.id === id);
+      if (!approved) return current;
+      setApprovedRequests(existing => [
+        {
+          id: approved.id,
+          user: approved.user,
+          category: approved.category,
+          message: approved.message,
+          distance: approved.distance,
+          eta: approved.eta,
+          urgent: approved.urgent,
+          buddy: approved.buddy,
+          timeAgo: "approved now",
+        },
+        ...existing,
+      ]);
+      return current.filter(item => item.id !== id);
+    });
+  }
+
+  function rejectRequest(id: string) {
+    setPendingRequests(current => current.filter(item => item.id !== id));
+  }
+
   return (
     <AppThemeContext.Provider value={{ mode: themeMode, isDark, setMode: setThemeMode }}>
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Mode" component={ModeScreen} />
-          <Stack.Screen name="RequesterTabs" component={RequesterTabs} />
-          <Stack.Screen name="HelperTabs" component={HelperTabs} />
-          <Stack.Screen name="Timeline" component={TimelineScreen} />
-          <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-          <Stack.Screen name="AboutUs" component={AboutUsScreen} />
-          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <AuthContext.Provider value={{ user, login, signup, logout }}>
+        <RequestReviewContext.Provider value={{ pendingRequests, approvedRequests, submitForReview, approveRequest, rejectRequest }}>
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Mode" component={ModeScreen} />
+              <Stack.Screen name="RequesterTabs" component={RequesterTabs} />
+              <Stack.Screen name="HelperTabs" component={HelperTabs} />
+              <Stack.Screen name="Timeline" component={TimelineScreen} />
+              <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+              <Stack.Screen name="AboutUs" component={AboutUsScreen} />
+              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </RequestReviewContext.Provider>
+      </AuthContext.Provider>
     </AppThemeContext.Provider>
   );
 }
@@ -2764,6 +3076,277 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
+  authScroll: {
+    flexGrow: 1,
+    paddingHorizontal: 22,
+    paddingTop: 54,
+    paddingBottom: 28,
+    alignItems: "center",
+    backgroundColor: "#FAFCFF",
+  },
+  authLogo: {
+    width: 142,
+    height: 142,
+    resizeMode: "contain",
+    marginBottom: 18,
+  },
+  authTitle: {
+    color: "#172033",
+    fontSize: 27,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  authSub: {
+    color: "#64748B",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 22,
+  },
+  authCard: {
+    width: "100%",
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 16,
+    shadowColor: "#14213D",
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  authModeSwitch: {
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "#EEF4FF",
+    flexDirection: "row",
+    padding: 4,
+    marginBottom: 14,
+  },
+  authModeButton: {
+    flex: 1,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  authModeButtonActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  authModeText: {
+    color: "#64748B",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  authModeTextActive: {
+    color: "#1652B7",
+  },
+  authInput: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 14,
+    color: "#1F2937",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  authSubmitButton: {
+    height: 54,
+    borderRadius: 17,
+    backgroundColor: "#1652B7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  authSubmitText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  authDemoBox: {
+    marginTop: 14,
+    borderRadius: 16,
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "rgba(249, 115, 22, 0.18)",
+    padding: 12,
+  },
+  authDemoTitle: {
+    color: "#9A3412",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  authDemoText: {
+    color: "#9A3412",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  adminHero: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 26,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  adminHeroTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 14,
+  },
+  adminEyebrow: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.3,
+  },
+  adminTitle: {
+    color: "#FFFFFF",
+    fontSize: 25,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+  adminSub: {
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 19,
+    marginTop: 6,
+  },
+  adminLogoutButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminList: {
+    paddingBottom: 28,
+    backgroundColor: "#F8FAFF",
+  },
+  adminSummaryCard: {
+    margin: 18,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  adminSummaryText: {
+    color: "#172033",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  adminRequestCard: {
+    marginHorizontal: 18,
+    marginBottom: 14,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 16,
+  },
+  adminRequestHeader: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  adminRequestIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminRequestCopy: {
+    flex: 1,
+  },
+  adminRequestUser: {
+    color: "#172033",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  adminRequestCategory: {
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+  adminRequestMessage: {
+    color: "#334155",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginTop: 12,
+  },
+  adminRequestMeta: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 8,
+  },
+  adminActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+  adminActionButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminRejectButton: {
+    backgroundColor: "#FFF1F2",
+    borderWidth: 1,
+    borderColor: "rgba(225, 29, 72, 0.18)",
+  },
+  adminApproveButton: {
+    backgroundColor: "#1652B7",
+  },
+  adminRejectText: {
+    color: "#E11D48",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  adminApproveText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  adminEmptyCard: {
+    marginHorizontal: 18,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 22,
+    alignItems: "center",
+  },
+  adminEmptyTitle: {
+    color: "#172033",
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 10,
+  },
+  adminEmptySub: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 5,
+  },
   settingsScroll: {
     flexGrow: 1,
     paddingHorizontal: 20,
@@ -2921,6 +3504,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     marginTop: 12,
+  },
+  settingsLogoutButton: {
+    minHeight: 50,
+    borderRadius: 17,
+    backgroundColor: "#FFF1F2",
+    borderWidth: 1,
+    borderColor: "rgba(225, 29, 72, 0.14)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 14,
+  },
+  settingsLogoutText: {
+    color: "#E11D48",
+    fontSize: 14,
+    fontWeight: "900",
   },
   legalScroll: {
     paddingBottom: 28,
