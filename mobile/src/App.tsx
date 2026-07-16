@@ -6,6 +6,7 @@ import {
   GestureResponderEvent,
   Image,
   LayoutChangeEvent,
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -69,6 +70,7 @@ type PendingHelpRequest = Request & {
   submittedAt: string;
   userUrgency: number;
   proofType?: ProofAsset["type"];
+  proofUri?: string;
   locationLabel?: string;
   contactHint?: string;
   riskSignals?: string[];
@@ -188,7 +190,7 @@ type RequestReviewContextValue = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
-const emergeAidLogo = require("../assets/emerge-aid-logo-transparent-cropped.png");
+const emergeAidLogo = require("../assets/emerge-aid-logo-transparent-balanced.png");
 const emergeAidSplash = require("../assets/emerge-aid-splash-transparent.png");
 const contactEmail = "imailemergeaid@gmail.com";
 const hardcodedAdmins = [
@@ -1297,6 +1299,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
       buddy: false,
       userUrgency,
       proofType: proofAsset?.type,
+      proofUri: proofAsset?.uri,
     });
     setRequestLaunching(true);
     setTimeout(() => {
@@ -2800,6 +2803,7 @@ function AdminDashboardScreen({ navigation }: any) {
   const [expandedId, setExpandedId] = useState<string | null>(pendingRequests[0]?.id ?? null);
   const [adminUrgencyById, setAdminUrgencyById] = useState<Record<string, number>>({});
   const [notesById, setNotesById] = useState<Record<string, string>>({});
+  const [proofPreview, setProofPreview] = useState<PendingHelpRequest | null>(null);
 
   const visibleRequests = pendingRequests.filter(request => {
     if (filter === "critical") return request.userUrgency >= 8 || request.urgent;
@@ -2834,6 +2838,30 @@ function AdminDashboardScreen({ navigation }: any) {
   return (
     <Screen>
       <StatusBar style="light" />
+      <Modal visible={Boolean(proofPreview)} transparent animationType="fade" onRequestClose={() => setProofPreview(null)}>
+        <View style={styles.proofModalBackdrop}>
+          <View style={[styles.proofModalCard, isDark && styles.surfaceDark]}>
+            <View style={styles.proofModalHeader}>
+              <View>
+                <Text style={[styles.proofModalTitle, isDark && styles.textOnDark]}>Proof Preview</Text>
+                <Text style={[styles.proofModalSub, isDark && styles.mutedOnDark]}>{proofPreview?.user} - {proofPreview?.proofType ?? "proof"}</Text>
+              </View>
+              <Pressable style={styles.proofModalClose} onPress={() => setProofPreview(null)}>
+                <Ionicons name="close" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
+              </Pressable>
+            </View>
+            {proofPreview?.proofUri ? (
+              <Image source={{ uri: proofPreview.proofUri }} style={styles.proofModalImage} />
+            ) : (
+              <View style={styles.proofModalPlaceholder}>
+                <Ionicons name={proofPreview?.proofType === "video" ? "videocam" : "image"} size={62} color="#1652B7" />
+                <Text style={styles.proofModalPlaceholderTitle}>Demo proof image</Text>
+                <Text style={styles.proofModalPlaceholderText}>Real camera captures will appear here when submitted from the request form.</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
       <FlatList
         ListHeaderComponent={
           <>
@@ -2844,9 +2872,6 @@ function AdminDashboardScreen({ navigation }: any) {
                   <Text style={styles.adminTitle}>Verify Help Requests</Text>
                   <Text style={styles.adminSub}>{user?.name ?? "Admin"} approves posts before helpers see them.</Text>
                 </View>
-                <Pressable style={styles.adminBackButton} onPress={() => navigation.goBack()}>
-                  <Ionicons name="chevron-back" size={22} color="#fff" />
-                </Pressable>
               </View>
             </LinearGradient>
             <View style={styles.adminSummaryGrid}>
@@ -2896,7 +2921,9 @@ function AdminDashboardScreen({ navigation }: any) {
               <Text style={[styles.adminRequestMessage, isDark && styles.textOnDark]}>{item.message}</Text>
               <View style={styles.adminQuickFacts}>
                 <AdminFact icon="location" text={item.locationLabel ?? item.distance} />
-                <AdminFact icon={item.proofType === "video" ? "videocam" : "camera"} text={item.proofType ? `${item.proofType} proof` : "No proof"} />
+                <Pressable onPress={() => item.proofType ? setProofPreview(item) : undefined}>
+                  <AdminFact icon={item.proofType === "video" ? "videocam" : "camera"} text={item.proofType ? `View ${item.proofType} proof` : "No proof"} />
+                </Pressable>
                 <AdminFact icon="time" text={item.submittedAt} />
               </View>
               {expanded ? (
@@ -3401,7 +3428,7 @@ const styles = StyleSheet.create({
   homeSettingsButton: {
     position: "absolute",
     top: 54,
-    left: 18,
+    right: 18,
     zIndex: 10,
     width: 52,
     height: 52,
@@ -3414,9 +3441,9 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   homeLogoPlate: {
-    width: 142,
-    height: 118,
-    borderRadius: 28,
+    width: 138,
+    height: 112,
+    borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
@@ -3432,8 +3459,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   homeLogo: {
-    width: 128,
-    height: 104,
+    width: 122,
+    height: 98,
     resizeMode: "contain",
   },
   homeTitle: {
@@ -3595,8 +3622,8 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   authLogoPlate: {
-    width: 112,
-    height: 92,
+    width: 108,
+    height: 88,
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
@@ -3607,8 +3634,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.12)",
   },
   authLogo: {
-    width: 102,
-    height: 82,
+    width: 96,
+    height: 78,
     resizeMode: "contain",
   },
   authTitle: {
@@ -4021,6 +4048,75 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     textAlignVertical: "top",
+  },
+  proofModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.72)",
+    paddingHorizontal: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  proofModalCard: {
+    width: "100%",
+    maxHeight: "82%",
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    overflow: "hidden",
+  },
+  proofModalHeader: {
+    minHeight: 72,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  proofModalTitle: {
+    color: "#172033",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  proofModalSub: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  proofModalClose: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  proofModalImage: {
+    width: "100%",
+    height: 420,
+    resizeMode: "contain",
+    backgroundColor: "#0B1220",
+  },
+  proofModalPlaceholder: {
+    minHeight: 360,
+    backgroundColor: "#EAF2FF",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  proofModalPlaceholderTitle: {
+    color: "#1652B7",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 14,
+  },
+  proofModalPlaceholderText: {
+    color: "#64748B",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 19,
+    textAlign: "center",
+    marginTop: 8,
   },
   adminActionRow: {
     flexDirection: "row",
