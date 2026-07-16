@@ -126,8 +126,8 @@ type LegalSection = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
-const responcityLogo = require("../assets/responcity-logo.jpg");
-const responcitySplash = require("../assets/responcity-splash.png");
+const emergeAidLogo = require("../assets/emerge-aid-logo-transparent-cropped.png");
+const emergeAidSplash = require("../assets/emerge-aid-splash-transparent.png");
 
 const theme = {
   orange: "#FF6B35",
@@ -338,7 +338,7 @@ const helperOrganisation = {
   joined: "Mar 2026",
   coordinator: "Anita Rao",
   coverage: "5.2 km active response area",
-  verifiedBy: "Responcity Trust Network",
+  verifiedBy: "Emerge Aid Trust Network",
 };
 
 const communityFeed: CommunityPost[] = [
@@ -348,7 +348,7 @@ const communityFeed: CommunityPost[] = [
     org: "Red Cross",
     rating: "4.9",
     time: "2h ago",
-    message: "Just helped 3 neighbors during the storm. Amazing community spirit - Responcity works!",
+    message: "Just helped 3 neighbors during the storm. Amazing community spirit - Emerge Aid works!",
     likes: 24,
     color: "#F45A3D",
   },
@@ -493,7 +493,7 @@ const aboutSections: LegalSection[] = [
   {
     title: "Who We Are",
     body: [
-      "Responcity is a one-tap emergency response platform connecting people in crisis to nearby verified community responders within seconds.",
+      "Emerge Aid is a one-tap emergency response platform connecting people in crisis to nearby verified community responders within seconds.",
       "We are building the missing coordination layer between \"I need help\" and \"help has arrived\" - city by city, country by country.",
       "We are not a government service or a helpline. We are the network that fills the gap before official help arrives, powered by people nearby.",
     ],
@@ -503,14 +503,14 @@ const aboutSections: LegalSection[] = [
     title: "Why We Exist",
     body: [
       "The problem is not a lack of willing helpers. It is a lack of coordination.",
-      "The trained nurse two buildings away or the off-duty paramedic around the corner may never know someone needs help. Responcity closes that connection gap.",
+      "The trained nurse two buildings away or the off-duty paramedic around the corner may never know someone needs help. Emerge Aid closes that connection gap.",
     ],
     accent: "#F97316",
   },
   {
     title: "What We Do",
     body: [
-      "When you tap SOS, Responcity alerts the nearest verified responder with your live location and medical profile.",
+      "When you tap SOS, Emerge Aid alerts the nearest verified responder with your live location and medical profile.",
       "They accept, navigate, and arrive with live tracking. If nobody responds within 90 seconds, official emergency services can be contacted on your behalf.",
       "Tap SOS once. Location shared. Responder alerted. Track live. Help arrives.",
     ],
@@ -546,9 +546,9 @@ const privacySections: LegalSection[] = [
   {
     title: "Who We Are",
     body: [
-      "Responcity is operated by Responcity Technologies Private Limited, registered and operating in Bengaluru, Karnataka, India.",
+      "Emerge Aid is operated by Emerge Aid Technologies Private Limited, registered and operating in Bengaluru, Karnataka, India.",
       "This Privacy Policy applies to citizens, verified responders, and B2B clients using our mobile app and web dashboard.",
-      "Contact for privacy: imailresponcity@gmail.com.",
+      "Contact for privacy: contact@emergeaid.app.",
     ],
   },
   {
@@ -570,7 +570,7 @@ const privacySections: LegalSection[] = [
   {
     title: "Location Data",
     body: [
-      "During SOS events, your real-time GPS location is shared only with your assigned responder and Responcity operations team for the active incident.",
+      "During SOS events, your real-time GPS location is shared only with your assigned responder and Emerge Aid operations team for the active incident.",
       "Responder GPS data is shared with the citizen during active incidents only.",
       "We do not continuously track your location when you are not involved in an active incident.",
       "You may withdraw location permission, but SOS alerts and responder matching may stop working.",
@@ -605,13 +605,13 @@ const privacySections: LegalSection[] = [
     title: "Your Rights",
     body: [
       "Under Indian law, you may request access, correction, deletion, withdrawal of consent, grievance redressal, and nomination rights related to your personal data.",
-      "To exercise your rights, contact imailresponcity@gmail.com. We aim to respond within 30 days.",
+      "To exercise your rights, contact contact@emergeaid.app. We aim to respond within 30 days.",
     ],
   },
   {
     title: "Children, Tracking, and Third Parties",
     body: [
-      "Responcity is not intended for children under 18 without parent or guardian consent.",
+      "Emerge Aid is not intended for children under 18 without parent or guardian consent.",
       "The mobile app does not use browser cookies, but may use device identifiers, analytics SDKs, and crash reporting tools for app operation and improvement.",
       "Third-party services such as cloud hosting, maps, payments, and messaging are used only as needed to operate the platform.",
     ],
@@ -631,10 +631,10 @@ function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void 
     <LinearGradient colors={[theme.orange, theme.red]} style={styles.hero}>
       <View style={styles.heroRow}>
         <View style={styles.logoMark}>
-          <Image source={responcityLogo} style={styles.logoImage} />
+          <Image source={emergeAidLogo} style={styles.logoImage} />
         </View>
         <View style={styles.heroTextWrap}>
-          <Text style={styles.brand}>Responcity</Text>
+          <Text style={styles.brand}>Emerge Aid</Text>
           <Text style={styles.tagline}>Help is just a tap away</Text>
           {mode ? <Text style={styles.modeLabel}>{mode}</Text> : null}
         </View>
@@ -653,8 +653,8 @@ function ModeScreen({ navigation }: any) {
     <Screen>
       <StatusBar style="dark" />
       <View style={styles.homeContent}>
-        <Image source={responcityLogo} style={styles.homeLogo} />
-        <Text style={styles.homeTitle}>How can Responcity help?</Text>
+        <Image source={emergeAidLogo} style={styles.homeLogo} />
+        <Text style={styles.homeTitle}>How can Emerge Aid help?</Text>
         <Text style={styles.homeSubtitle}>Community emergency assistance - available now</Text>
         <ModeCard
           title="I Need Help"
@@ -677,7 +677,7 @@ function ModeScreen({ navigation }: any) {
         </View>
         <Text style={styles.homeContact}>
           For collaboration/business inquiries contact{" "}
-          <Text style={styles.homeContactEmail}>imailresponcity@gmail.com</Text>
+          <Text style={styles.homeContactEmail}>contact@emergeaid.app</Text>
         </Text>
         <View style={styles.homeLegalLinks}>
           <Pressable style={({ pressed }) => [styles.homeLegalButton, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("AboutUs")}>
@@ -1329,7 +1329,7 @@ function RequesterHeader({ onSwitch }: { onSwitch: () => void }) {
   return (
     <LinearGradient colors={["#FF5A3D", "#E71933"]} style={styles.requesterHeader}>
       <View style={styles.requesterHeaderLogo}>
-        <Image source={responcityLogo} style={styles.requesterHeaderLogoImage} />
+        <Image source={emergeAidLogo} style={styles.requesterHeaderLogoImage} />
       </View>
       <View style={styles.requesterHeaderCopy}>
         <Text style={styles.requesterEyebrow}>REQUESTER MODE</Text>
@@ -1526,7 +1526,7 @@ function SafeCheckIn({
             <Ionicons name="shield-checkmark" size={34} color={theme.green} />
           </View>
           <Text style={styles.checkTitle}>Session Complete!</Text>
-          <Text style={styles.checkSub}>Session lasted {formatElapsed(session.elapsedSeconds)}. How would you rate your experience with Responcity?</Text>
+          <Text style={styles.checkSub}>Session lasted {formatElapsed(session.elapsedSeconds)}. How would you rate your experience with Emerge Aid?</Text>
           <View style={styles.reviewCard}>
             <Text style={styles.reviewTitle}>Rate your overall experience</Text>
             <View style={styles.ratingRow}>
@@ -1827,7 +1827,7 @@ function HelperHome({ navigation, route }: any) {
             <LinearGradient colors={["#0B67D1", "#0857B6"]} style={styles.helperHero}>
               <View style={styles.helperHeroTop}>
                 <View style={styles.helperLogoBox}>
-                  <Image source={responcityLogo} style={styles.helperLogoImage} />
+                  <Image source={emergeAidLogo} style={styles.helperLogoImage} />
                 </View>
                 <View style={styles.helperHeroCopy}>
                   <Text style={styles.helperEyebrow}>HELPER MODE</Text>
@@ -2232,8 +2232,8 @@ function LegalScreen({
           <Pressable style={styles.legalBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#1B2A6B" />
           </Pressable>
-          <Image source={responcitySplash} style={styles.legalLogo} />
-          <Text style={styles.legalEyebrow}>RESPONCITY</Text>
+          <Image source={emergeAidSplash} style={styles.legalLogo} />
+          <Text style={styles.legalEyebrow}>Emerge Aid</Text>
           <Text style={styles.legalTitle}>{title}</Text>
           <Text style={styles.legalSubtitle}>{subtitle}</Text>
         </LinearGradient>
@@ -2252,9 +2252,9 @@ function LegalScreen({
         ))}
 
         <View style={styles.legalFooter}>
-          <Text style={styles.legalFooterTitle}>Responcity</Text>
+          <Text style={styles.legalFooterTitle}>Emerge Aid</Text>
           <Text style={styles.legalFooterText}>Help is just a tap away</Text>
-          <Text style={styles.legalFooterEmail}>imailresponcity@gmail.com</Text>
+          <Text style={styles.legalFooterEmail}>contact@emergeaid.app</Text>
           {updated ? <Text style={styles.legalUpdated}>{updated}</Text> : null}
         </View>
       </ScrollView>
@@ -2278,9 +2278,9 @@ function PrivacyPolicyScreen({ navigation }: any) {
     <LegalScreen
       navigation={navigation}
       title="Privacy Policy"
-      subtitle="How Responcity collects, uses, protects, and shares data while operating emergency response services."
+      subtitle="How Emerge Aid collects, uses, protects, and shares data while operating emergency response services."
       sections={privacySections}
-      updated="Effective January 1, 2025 - Responcity Technologies Private Limited"
+      updated="Effective January 1, 2025 - Emerge Aid Technologies Private Limited"
     />
   );
 }
@@ -2362,7 +2362,7 @@ function StartupScreen() {
         style={[styles.startupPulse, { opacity: pulseOpacity, transform: [{ scale: pulseScale }] }]}
       />
       <Animated.View style={[styles.startupLogoShell, { opacity: logoAnim, transform: [{ scale: logoScale }] }]}>
-        <Image source={responcitySplash} style={styles.startupLogo} />
+        <Image source={emergeAidSplash} style={styles.startupLogo} />
       </Animated.View>
     </SafeAreaView>
   );
@@ -2392,8 +2392,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   startupLogo: {
-    width: 170,
-    height: 170,
+    width: 190,
+    height: 190,
     resizeMode: "contain",
   },
   safe: {
@@ -2431,9 +2431,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   logoImage: {
-    width: 52,
-    height: 52,
-    resizeMode: "cover",
+    width: 44,
+    height: 44,
+    resizeMode: "contain",
   },
   heroTextWrap: {
     flex: 1,
@@ -2476,10 +2476,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   homeLogo: {
-    width: 112,
-    height: 112,
+    width: 172,
+    height: 172,
     resizeMode: "contain",
-    marginBottom: 28,
+    marginBottom: 22,
   },
   homeTitle: {
     color: "#192238",
@@ -2628,8 +2628,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   legalLogo: {
-    width: 86,
-    height: 86,
+    width: 132,
+    height: 132,
     resizeMode: "contain",
     marginTop: 18,
   },
@@ -2911,9 +2911,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   requesterHeaderLogoImage: {
-    width: 46,
-    height: 46,
-    resizeMode: "cover",
+    width: 38,
+    height: 38,
+    resizeMode: "contain",
   },
   requesterHeaderCopy: {
     flex: 1,
@@ -4201,9 +4201,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   helperLogoImage: {
-    width: 54,
-    height: 54,
-    resizeMode: "cover",
+    width: 46,
+    height: 46,
+    resizeMode: "contain",
   },
   helperHeroCopy: {
     flex: 1,

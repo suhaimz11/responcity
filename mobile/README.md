@@ -1,6 +1,6 @@
-# Responcity Mobile
+# Emerge Aid Mobile
 
-Expo React Native demo app for Responcity.
+Expo React Native demo app for Emerge Aid.
 
 ## Development With Expo Go
 

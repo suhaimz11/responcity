@@ -1,13 +1,14 @@
 {
   "expo": {
-    "name": "Responcity",
-    "slug": "responcity-mobile",
+    "name": "Emerge Aid",
+    "slug": "emerge-aid-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "scheme": "responcity",
+    "scheme": "emergeaid",
+    "icon": "./assets/emerge-aid-icon-fit.png",
     "splash": {
-      "image": "./assets/responcity-splash.png",
+      "image": "./assets/emerge-aid-splash-transparent.png",
       "resizeMode": "contain",
       "backgroundColor": "#FAFCFF"
     },
@@ -20,15 +21,15 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.responcity.app",
+      "bundleIdentifier": "com.emergeaid.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Responcity uses your location to alert nearby verified responders during an emergency.",
-        "NSCameraUsageDescription": "Responcity uses the camera so you can capture emergency proof.",
-        "NSMicrophoneUsageDescription": "Responcity uses the microphone when you record video proof."
+        "NSLocationWhenInUseUsageDescription": "Emerge Aid uses your location to alert nearby verified responders during an emergency.",
+        "NSCameraUsageDescription": "Emerge Aid uses the camera so you can capture emergency proof.",
+        "NSMicrophoneUsageDescription": "Emerge Aid uses the microphone when you record video proof."
       }
     },
     "android": {
-      "package": "com.responcity.app",
+      "package": "com.emergeaid.app",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
