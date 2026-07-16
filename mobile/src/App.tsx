@@ -500,7 +500,7 @@ const helperTiers: HelperTier[] = [
   { name: "Bronze", minPoints: 0, color: "#B7791F", icon: "medal" },
   { name: "Silver", minPoints: 250, color: "#94A3B8", icon: "medal" },
   { name: "Gold", minPoints: 650, color: "#F59E0B", icon: "trophy" },
-  { name: "Platinum", minPoints: 1200, color: "#06B6D4", icon: "diamond" },
+  { name: "Platinum", minPoints: 1200, color: "#06B6D4", icon: "sparkles" },
 ];
 
 const helperActivityLog: HelperActivityLog[] = [
@@ -2525,11 +2525,22 @@ function ResponderStats() {
             {helperTiers.map((tier, index) => {
               const unlocked = totalPoints >= tier.minPoints;
               const active = tier.name === currentTier.name;
+              const lockedColor = tier.name === "Gold" ? "#D6B96A" : tier.name === "Platinum" ? "#7FB7C5" : tier.color;
               return (
                 <View key={tier.name} style={[styles.tierRow, index === helperTiers.length - 1 && styles.tierRowLast]}>
                   <View style={styles.tierMarkerWrap}>
-                    <View style={[styles.tierDot, active && styles.tierDotActive, { backgroundColor: unlocked ? tier.color : "#CBD5E1" }]}>
+                    <View
+                      style={[
+                        styles.tierDot,
+                        !unlocked && styles.tierDotLocked,
+                        unlocked && tier.name === "Gold" && styles.tierDotGold,
+                        unlocked && tier.name === "Platinum" && styles.tierDotPlatinum,
+                        active && styles.tierDotActive,
+                        { backgroundColor: unlocked ? tier.color : lockedColor },
+                      ]}
+                    >
                       <Ionicons name={tier.icon} size={16} color="#fff" />
+                      {tier.name === "Platinum" ? <Ionicons name="diamond" size={10} color="#E0F7FF" style={styles.tierMiniBadge} /> : null}
                     </View>
                   </View>
                   <View style={[styles.tierCopy, active && styles.tierCopyActive, isDark && active && styles.tierCopyActiveDark]}>
@@ -2783,17 +2794,12 @@ function LoginScreen({ navigation }: any) {
 
 function AdminDashboardScreen({ navigation }: any) {
   const { isDark } = useAppTheme();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { pendingRequests, approveRequest, rejectRequest } = useRequestReview();
   const [filter, setFilter] = useState<"all" | "critical" | "proof">("all");
   const [expandedId, setExpandedId] = useState<string | null>(pendingRequests[0]?.id ?? null);
   const [adminUrgencyById, setAdminUrgencyById] = useState<Record<string, number>>({});
   const [notesById, setNotesById] = useState<Record<string, string>>({});
-
-  function leaveAdmin() {
-    logout();
-    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-  }
 
   const visibleRequests = pendingRequests.filter(request => {
     if (filter === "critical") return request.userUrgency >= 8 || request.urgent;
@@ -2838,8 +2844,8 @@ function AdminDashboardScreen({ navigation }: any) {
                   <Text style={styles.adminTitle}>Verify Help Requests</Text>
                   <Text style={styles.adminSub}>{user?.name ?? "Admin"} approves posts before helpers see them.</Text>
                 </View>
-                <Pressable style={styles.adminLogoutButton} onPress={leaveAdmin}>
-                  <Ionicons name="log-out-outline" size={18} color="#fff" />
+                <Pressable style={styles.adminBackButton} onPress={() => navigation.goBack()}>
+                  <Ionicons name="chevron-back" size={22} color="#fff" />
                 </Pressable>
               </View>
             </LinearGradient>
@@ -3385,7 +3391,7 @@ const styles = StyleSheet.create({
   homeContent: {
     flex: 1,
     paddingHorizontal: 22,
-    paddingTop: 50,
+    paddingTop: 72,
     paddingBottom: 22,
     alignItems: "center",
   },
@@ -3394,26 +3400,18 @@ const styles = StyleSheet.create({
   },
   homeSettingsButton: {
     position: "absolute",
-    top: 18,
-    right: 18,
+    top: 54,
+    left: 18,
     zIndex: 10,
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.12)",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#14213D",
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
   },
   homeSettingsButtonDark: {
-    backgroundColor: "#101C2F",
-    borderColor: "rgba(148, 163, 184, 0.22)",
+    backgroundColor: "transparent",
   },
   homeLogoPlate: {
     width: 142,
@@ -3763,6 +3761,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   adminLogoutButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminBackButton: {
     width: 44,
     height: 44,
     borderRadius: 16,
@@ -6153,6 +6159,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 3,
     borderColor: "#FFFFFF",
+  },
+  tierDotLocked: {
+    opacity: 0.72,
+  },
+  tierDotGold: {
+    shadowColor: "#F59E0B",
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+  },
+  tierDotPlatinum: {
+    shadowColor: "#06B6D4",
+    shadowOpacity: 0.38,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
+  },
+  tierMiniBadge: {
+    position: "absolute",
+    right: 5,
+    top: 5,
   },
   tierDotActive: {
     width: 46,
