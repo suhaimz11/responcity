@@ -141,6 +141,22 @@ type GroupMission = {
   urgent: boolean;
 };
 
+type HelperTier = {
+  name: string;
+  minPoints: number;
+  color: string;
+  icon: keyof typeof Ionicons.glyphMap;
+};
+
+type HelperActivityLog = {
+  id: string;
+  title: string;
+  detail: string;
+  date: string;
+  points: number;
+  category: string;
+};
+
 type LegalSection = {
   title: string;
   body: string[];
@@ -479,6 +495,56 @@ const helperOrganisation = {
   coverage: "5.2 km active response area",
   verifiedBy: "Emerge Aid Trust Network",
 };
+
+const helperTiers: HelperTier[] = [
+  { name: "Bronze", minPoints: 0, color: "#B7791F", icon: "medal" },
+  { name: "Silver", minPoints: 250, color: "#94A3B8", icon: "medal" },
+  { name: "Gold", minPoints: 650, color: "#F59E0B", icon: "trophy" },
+  { name: "Platinum", minPoints: 1200, color: "#06B6D4", icon: "diamond" },
+];
+
+const helperActivityLog: HelperActivityLog[] = [
+  {
+    id: "ha1",
+    title: "Medical response accepted",
+    detail: "Reached requester and provided first aid support.",
+    date: "Today",
+    points: 80,
+    category: "medical",
+  },
+  {
+    id: "ha2",
+    title: "Safe escort completed",
+    detail: "Walked requester safely to a parking area.",
+    date: "Yesterday",
+    points: 45,
+    category: "safety",
+  },
+  {
+    id: "ha3",
+    title: "Vehicle assistance",
+    detail: "Helped change a flat tyre near Main Road.",
+    date: "Jul 14",
+    points: 55,
+    category: "transport",
+  },
+  {
+    id: "ha4",
+    title: "Community check-in",
+    detail: "Verified an elderly resident was safe after outage.",
+    date: "Jul 12",
+    points: 35,
+    category: "home",
+  },
+  {
+    id: "ha5",
+    title: "Blood donor connection",
+    detail: "Connected requester with a nearby O+ donor.",
+    date: "Jul 10",
+    points: 70,
+    category: "blood",
+  },
+];
 
 const communityFeed: CommunityPost[] = [
   {
@@ -2413,14 +2479,116 @@ function GroupMissionCard({ mission }: { mission: GroupMission }) {
 }
 
 function ResponderStats() {
+  const { isDark } = useAppTheme();
+  const totalPoints = 430;
+  const missionsCompleted = helperActivityLog.length + 8;
+  const currentTierIndex = helperTiers.reduce((index, tier, tierIndex) => (totalPoints >= tier.minPoints ? tierIndex : index), 0);
+  const currentTier = helperTiers[currentTierIndex];
+  const nextTier = helperTiers[currentTierIndex + 1];
+  const pointsIntoTier = totalPoints - currentTier.minPoints;
+  const pointsNeededForTier = nextTier ? nextTier.minPoints - currentTier.minPoints : 1;
+  const progress = nextTier ? Math.min(1, pointsIntoTier / pointsNeededForTier) : 1;
+  const pointsToNext = nextTier ? nextTier.minPoints - totalPoints : 0;
+
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <BrandHeader mode="Responder stats" />
-        <InfoCard title="This week" lines={["Missions helped: 8", "Average response: 3.6 minutes", "Rating: 4.9/5"]} />
-        <InfoCard title="Badges" lines={["Fast responder", "Verified first aid", "Community helper"]} />
+      <ScrollView contentContainerStyle={styles.rankingScroll}>
+        <LinearGradient colors={["#0B67D1", "#0857B6"]} style={styles.rankingHero}>
+          <Text style={styles.rankingEyebrow}>HELPER RANK</Text>
+          <View style={styles.rankingTierRow}>
+            <View style={[styles.rankingTierIcon, { backgroundColor: currentTier.color }]}>
+              <Ionicons name={currentTier.icon} size={30} color="#fff" />
+            </View>
+            <View style={styles.rankingHeroCopy}>
+              <Text style={styles.rankingTierName}>{currentTier.name}</Text>
+              <Text style={styles.rankingTierSub}>{totalPoints} points earned</Text>
+            </View>
+          </View>
+          <View style={styles.rankingProgressShell}>
+            <View style={[styles.rankingProgressFill, { width: `${progress * 100}%` }]} />
+          </View>
+          <Text style={styles.rankingProgressText}>
+            {nextTier ? `${pointsToNext} points to ${nextTier.name}` : "Top tier reached"}
+          </Text>
+        </LinearGradient>
+
+        <View style={styles.rankingStatsRow}>
+          <RankingStat label="Missions" value={String(missionsCompleted)} dark={isDark} />
+          <RankingStat label="Rating" value="4.9" dark={isDark} />
+          <RankingStat label="Streak" value="5d" dark={isDark} />
+        </View>
+
+        <View style={[styles.tierCard, isDark && styles.surfaceDark]}>
+          <Text style={[styles.rankingSectionTitle, isDark && styles.textOnDark]}>Tier ladder</Text>
+          <View style={styles.tierLinearTrack}>
+            <View style={[styles.tierConnector, isDark && styles.tierConnectorDark]} />
+            {helperTiers.map((tier, index) => {
+              const unlocked = totalPoints >= tier.minPoints;
+              const active = tier.name === currentTier.name;
+              return (
+                <View key={tier.name} style={[styles.tierRow, index === helperTiers.length - 1 && styles.tierRowLast]}>
+                  <View style={styles.tierMarkerWrap}>
+                    <View style={[styles.tierDot, active && styles.tierDotActive, { backgroundColor: unlocked ? tier.color : "#CBD5E1" }]}>
+                      <Ionicons name={tier.icon} size={16} color="#fff" />
+                    </View>
+                  </View>
+                  <View style={[styles.tierCopy, active && styles.tierCopyActive, isDark && active && styles.tierCopyActiveDark]}>
+                    <Text style={[styles.tierName, isDark && styles.textOnDark]}>{tier.name}</Text>
+                    <Text style={[styles.tierMeta, isDark && styles.mutedOnDark]}>{tier.minPoints}+ points</Text>
+                  </View>
+                  {active ? (
+                    <View style={styles.currentTierPill}>
+                      <Text style={styles.currentTierText}>Current</Text>
+                    </View>
+                  ) : unlocked ? (
+                    <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                  ) : (
+                    <Text style={[styles.lockedTierText, isDark && styles.mutedOnDark]}>{helperTiers[index].minPoints - totalPoints} pts</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.rankingSectionHeader}>
+          <Text style={[styles.rankingSectionTitle, isDark && styles.textOnDark]}>Activity history</Text>
+          <Text style={[styles.rankingSectionMeta, isDark && styles.mutedOnDark]}>Points earned</Text>
+        </View>
+        {helperActivityLog.map(activity => <HelperActivityCard key={activity.id} activity={activity} />)}
       </ScrollView>
     </Screen>
+  );
+}
+
+function RankingStat({ label, value, dark }: { label: string; value: string; dark: boolean }) {
+  return (
+    <View style={[styles.rankingStatCard, dark && styles.surfaceDark]}>
+      <Text style={[styles.rankingStatValue, dark && styles.textOnDark]}>{value}</Text>
+      <Text style={[styles.rankingStatLabel, dark && styles.mutedOnDark]}>{label}</Text>
+    </View>
+  );
+}
+
+function HelperActivityCard({ activity }: { activity: HelperActivityLog }) {
+  const { isDark } = useAppTheme();
+  const category = categoryFor(activity.category);
+
+  return (
+    <View style={[styles.helperActivityCard, isDark && styles.surfaceDark]}>
+      <View style={[styles.helperActivityIcon, { backgroundColor: category.bg }]}>
+        <Ionicons name={category.icon} size={20} color={category.color} />
+      </View>
+      <View style={styles.helperActivityCopy}>
+        <Text style={[styles.helperActivityTitle, isDark && styles.textOnDark]}>{activity.title}</Text>
+        <Text style={[styles.helperActivityDetail, isDark && styles.mutedOnDark]}>{activity.detail}</Text>
+        <Text style={[styles.helperActivityDate, isDark && styles.mutedOnDark]}>{activity.date}</Text>
+      </View>
+      <View style={styles.helperPointsPill}>
+        <Text style={styles.helperPointsValue}>+{activity.points}</Text>
+        <Text style={styles.helperPointsLabel}>pts</Text>
+      </View>
+    </View>
   );
 }
 
@@ -5844,6 +6012,261 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     marginTop: 3,
+  },
+  rankingScroll: {
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 34,
+  },
+  rankingHero: {
+    borderRadius: 26,
+    padding: 20,
+    marginBottom: 14,
+  },
+  rankingEyebrow: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    marginBottom: 14,
+  },
+  rankingTierRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  rankingTierIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
+  },
+  rankingHeroCopy: {
+    flex: 1,
+  },
+  rankingTierName: {
+    color: "#FFFFFF",
+    fontSize: 30,
+    fontWeight: "900",
+  },
+  rankingTierSub: {
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  rankingProgressShell: {
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    overflow: "hidden",
+    marginTop: 20,
+  },
+  rankingProgressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
+  },
+  rankingProgressText: {
+    color: "rgba(255,255,255,0.86)",
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 9,
+  },
+  rankingStatsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+  },
+  rankingStatCard: {
+    flex: 1,
+    minHeight: 76,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rankingStatValue: {
+    color: "#172033",
+    fontSize: 21,
+    fontWeight: "900",
+  },
+  rankingStatLabel: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  tierCard: {
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 16,
+    marginBottom: 18,
+  },
+  rankingSectionTitle: {
+    color: "#172033",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  tierLinearTrack: {
+    position: "relative",
+    marginTop: 10,
+  },
+  tierConnector: {
+    position: "absolute",
+    left: 19,
+    top: 22,
+    bottom: 26,
+    width: 3,
+    borderRadius: 999,
+    backgroundColor: "#D8E2F2",
+  },
+  tierConnectorDark: {
+    backgroundColor: "#26364A",
+  },
+  tierRow: {
+    minHeight: 70,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  tierRowLast: {
+    minHeight: 54,
+  },
+  tierMarkerWrap: {
+    width: 40,
+    alignItems: "center",
+    zIndex: 2,
+  },
+  tierDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+  },
+  tierDotActive: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    marginLeft: 0,
+  },
+  tierCopy: {
+    flex: 1,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  tierCopyActive: {
+    backgroundColor: "#EEF4FF",
+  },
+  tierCopyActiveDark: {
+    backgroundColor: "rgba(37, 99, 235, 0.16)",
+  },
+  tierName: {
+    color: "#172033",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  tierMeta: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  currentTierPill: {
+    borderRadius: 999,
+    backgroundColor: "#EAF2FF",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  currentTierText: {
+    color: "#1652B7",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  lockedTierText: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  rankingSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  rankingSectionMeta: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  helperActivityCard: {
+    minHeight: 104,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+  },
+  helperActivityIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helperActivityCopy: {
+    flex: 1,
+  },
+  helperActivityTitle: {
+    color: "#172033",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  helperActivityDetail: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  helperActivityDate: {
+    color: "#94A3B8",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+  helperPointsPill: {
+    width: 54,
+    minHeight: 54,
+    borderRadius: 16,
+    backgroundColor: "#FFF2D8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helperPointsValue: {
+    color: "#E86A2C",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  helperPointsLabel: {
+    color: "#B45309",
+    fontSize: 9,
+    fontWeight: "900",
   },
   requestCard: {
     marginHorizontal: 20,
