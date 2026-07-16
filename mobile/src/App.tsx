@@ -31,6 +31,7 @@ type RootStackParamList = {
   HelperTabs: undefined;
   Timeline: undefined;
   RequestDetails: { categoryId: string };
+  AdminDashboard: undefined;
   Settings: undefined;
   AboutUs: undefined;
   PrivacyPolicy: undefined;
@@ -68,6 +69,11 @@ type PendingHelpRequest = Request & {
   submittedAt: string;
   userUrgency: number;
   proofType?: ProofAsset["type"];
+  locationLabel?: string;
+  contactHint?: string;
+  riskSignals?: string[];
+  adminUrgency?: number;
+  status?: "new" | "reviewing";
 };
 
 type CheckInStatus = "locked" | "ready" | "active" | "sos" | "review" | "thanks";
@@ -302,6 +308,63 @@ const alertPoolRequests: Request[] = [
     eta: "12 min",
     urgent: false,
     timeAgo: "9 min ago",
+  },
+];
+
+const demoPendingRequests: PendingHelpRequest[] = [
+  {
+    id: "pending-medical-1",
+    user: "Aisha R.",
+    category: "medical",
+    message: "Someone has fainted near the pharmacy and needs immediate first aid support.",
+    distance: "0.5 mi",
+    eta: "3 min",
+    urgent: true,
+    timeAgo: "1 min ago",
+    submittedAt: "1 min ago",
+    userUrgency: 9,
+    adminUrgency: 8,
+    proofType: "photo",
+    locationLabel: "Near City Care Pharmacy, Oak Street",
+    contactHint: "Phone verified - same device used for proof upload",
+    riskSignals: ["High medical urgency", "Photo proof attached", "Nearby helpers available"],
+    status: "new",
+  },
+  {
+    id: "pending-vehicle-1",
+    user: "Kiran M.",
+    category: "transport",
+    message: "Flat tyre on the main road, stuck with family and need help changing it.",
+    distance: "1.1 mi",
+    eta: "6 min",
+    urgent: false,
+    timeAgo: "4 min ago",
+    submittedAt: "4 min ago",
+    userUrgency: 6,
+    adminUrgency: 5,
+    proofType: "photo",
+    locationLabel: "Main Road service lane, 1.1 mi from helpers",
+    contactHint: "Known user - 2 previous completed requests",
+    riskSignals: ["Moderate urgency", "Photo proof attached", "Not life-threatening"],
+    status: "reviewing",
+  },
+  {
+    id: "pending-home-1",
+    user: "Nora S.",
+    category: "home",
+    message: "Gas smell in apartment corridor, need someone nearby to verify and help evacuate.",
+    distance: "0.8 mi",
+    eta: "5 min",
+    urgent: true,
+    timeAgo: "6 min ago",
+    submittedAt: "6 min ago",
+    userUrgency: 10,
+    adminUrgency: 10,
+    proofType: "video",
+    locationLabel: "Apartment Block C corridor, Greenview Residency",
+    contactHint: "New user - location and video proof available",
+    riskSignals: ["Gas leak keywords", "Video proof attached", "Escalate if no helper accepts"],
+    status: "new",
   },
 ];
 
@@ -726,6 +789,7 @@ function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void 
 
 function ModeScreen({ navigation }: any) {
   const { isDark } = useAppTheme();
+  const { user } = useAuth();
 
   return (
     <Screen dark={isDark}>
@@ -751,6 +815,15 @@ function ModeScreen({ navigation }: any) {
           colors={["#1BA3F7", "#1652B7"]}
           onPress={() => navigation.navigate("HelperTabs")}
         />
+        {user?.role === "admin" ? (
+          <ModeCard
+            title="Admin Review"
+            subtitle="Approve help requests before they appear to helpers"
+            icon="shield-checkmark"
+            colors={["#14213D", "#0B67D1"]}
+            onPress={() => navigation.navigate("AdminDashboard")}
+          />
+        ) : null}
         <View style={[styles.homeStatsCard, isDark && styles.homeStatsCardDark]}>
           <HomeStat icon="people" value="2,841" label="Helpers" />
           <HomeStat icon="checkmark-done-circle" value="14,920" label="Missions" />
@@ -803,7 +876,6 @@ function HomeStat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap
 }
 
 function RequesterTabs({ navigation, route }: any) {
-  const { user } = useAuth();
   const [session, setSession] = useState<EmergencySession>(defaultEmergencySession);
   const lastUnlockToken = useRef<number | null>(null);
 
@@ -841,16 +913,11 @@ function RequesterTabs({ navigation, route }: any) {
         {props => <SafeCheckIn {...props} session={session} setSession={setSession} />}
       </Tab.Screen>
       <Tab.Screen name="Activity" component={MissionHistoryScreen} options={{ tabBarIcon: tabIcon("pulse") }} />
-      {user?.role === "admin" ? (
-        <Tab.Screen name="Admin" component={AdminDashboardScreen} options={{ tabBarIcon: tabIcon("shield-checkmark") }} />
-      ) : null}
     </Tab.Navigator>
   );
 }
 
 function HelperTabs({ navigation }: any) {
-  const { user } = useAuth();
-
   return (
     <Tab.Navigator screenOptions={tabOptions}>
       <Tab.Screen
@@ -861,9 +928,6 @@ function HelperTabs({ navigation }: any) {
       />
       <Tab.Screen name="Community" component={ResponderMap} options={{ tabBarIcon: tabIcon("people") }} />
       <Tab.Screen name="Rankings" component={ResponderStats} options={{ tabBarIcon: tabIcon("trophy") }} />
-      {user?.role === "admin" ? (
-        <Tab.Screen name="Admin" component={AdminDashboardScreen} options={{ tabBarIcon: tabIcon("shield-checkmark") }} />
-      ) : null}
     </Tab.Navigator>
   );
 }
@@ -2461,10 +2525,44 @@ function LoginScreen({ navigation }: any) {
 function AdminDashboardScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const { pendingRequests, approveRequest, rejectRequest } = useRequestReview();
+  const [filter, setFilter] = useState<"all" | "critical" | "proof">("all");
+  const [expandedId, setExpandedId] = useState<string | null>(pendingRequests[0]?.id ?? null);
+  const [adminUrgencyById, setAdminUrgencyById] = useState<Record<string, number>>({});
+  const [notesById, setNotesById] = useState<Record<string, string>>({});
 
   function leaveAdmin() {
     logout();
     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  }
+
+  const visibleRequests = pendingRequests.filter(request => {
+    if (filter === "critical") return request.userUrgency >= 8 || request.urgent;
+    if (filter === "proof") return Boolean(request.proofType);
+    return true;
+  });
+  const criticalCount = pendingRequests.filter(request => request.userUrgency >= 8 || request.urgent).length;
+  const proofCount = pendingRequests.filter(request => Boolean(request.proofType)).length;
+
+  function updateAdminUrgency(id: string, delta: number, fallback: number) {
+    setAdminUrgencyById(current => {
+      const currentValue = current[id] ?? fallback;
+      return { ...current, [id]: Math.max(1, Math.min(10, currentValue + delta)) };
+    });
+  }
+
+  function publishRequest(item: PendingHelpRequest) {
+    const adminUrgency = adminUrgencyById[item.id] ?? item.adminUrgency ?? item.userUrgency;
+    Alert.alert("Publish request?", `Admin urgency will be set to ${adminUrgency}/10 and helpers will see this request.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Publish", onPress: () => approveRequest(item.id) },
+    ]);
+  }
+
+  function declineRequest(item: PendingHelpRequest) {
+    Alert.alert("Reject request?", "This removes the request from admin review for this demo.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Reject", style: "destructive", onPress: () => rejectRequest(item.id) },
+    ]);
   }
 
   return (
@@ -2485,13 +2583,19 @@ function AdminDashboardScreen({ navigation }: any) {
                 </Pressable>
               </View>
             </LinearGradient>
-            <View style={styles.adminSummaryCard}>
-              <Ionicons name="shield-checkmark" size={22} color="#1652B7" />
-              <Text style={styles.adminSummaryText}>{pendingRequests.length} pending verification</Text>
+            <View style={styles.adminSummaryGrid}>
+              <AdminMetric icon="time" value={String(pendingRequests.length)} label="Pending" color="#1652B7" />
+              <AdminMetric icon="flame" value={String(criticalCount)} label="Critical" color="#E11D48" />
+              <AdminMetric icon="camera" value={String(proofCount)} label="With proof" color="#059669" />
+            </View>
+            <View style={styles.adminFilterRow}>
+              <AdminFilterChip label="All" active={filter === "all"} onPress={() => setFilter("all")} />
+              <AdminFilterChip label="Critical" active={filter === "critical"} onPress={() => setFilter("critical")} />
+              <AdminFilterChip label="Proof attached" active={filter === "proof"} onPress={() => setFilter("proof")} />
             </View>
           </>
         }
-        data={pendingRequests}
+        data={visibleRequests}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.adminList}
         ListEmptyComponent={
@@ -2503,24 +2607,77 @@ function AdminDashboardScreen({ navigation }: any) {
         }
         renderItem={({ item }) => {
           const cat = categoryFor(item.category);
+          const expanded = expandedId === item.id;
+          const adminUrgency = adminUrgencyById[item.id] ?? item.adminUrgency ?? item.userUrgency;
+          const note = notesById[item.id] ?? "";
           return (
             <View style={styles.adminRequestCard}>
-              <View style={styles.adminRequestHeader}>
+              <Pressable style={styles.adminRequestHeader} onPress={() => setExpandedId(expanded ? null : item.id)}>
                 <View style={[styles.adminRequestIcon, { backgroundColor: cat.bg }]}>
                   <Ionicons name={cat.icon} size={22} color={cat.color} />
                 </View>
                 <View style={styles.adminRequestCopy}>
-                  <Text style={styles.adminRequestUser}>{item.user}</Text>
+                  <View style={styles.adminRequestTitleRow}>
+                    <Text style={styles.adminRequestUser}>{item.user}</Text>
+                    <View style={[styles.adminStatusPill, item.status === "new" && styles.adminStatusPillNew]}>
+                      <Text style={[styles.adminStatusText, item.status === "new" && styles.adminStatusTextNew]}>{item.status === "new" ? "NEW" : "REVIEWING"}</Text>
+                    </View>
+                  </View>
                   <Text style={[styles.adminRequestCategory, { color: cat.color }]}>{cat.label.toUpperCase()} - user urgency {item.userUrgency}/10</Text>
                 </View>
-              </View>
+                <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
+              </Pressable>
               <Text style={styles.adminRequestMessage}>{item.message}</Text>
-              <Text style={styles.adminRequestMeta}>Proof: {item.proofType ?? "not attached"} - Submitted {item.submittedAt}</Text>
+              <View style={styles.adminQuickFacts}>
+                <AdminFact icon="location" text={item.locationLabel ?? item.distance} />
+                <AdminFact icon={item.proofType === "video" ? "videocam" : "camera"} text={item.proofType ? `${item.proofType} proof` : "No proof"} />
+                <AdminFact icon="time" text={item.submittedAt} />
+              </View>
+              {expanded ? (
+                <View style={styles.adminDeepPanel}>
+                  <Text style={styles.adminPanelTitle}>Verification checklist</Text>
+                  <View style={styles.adminChecklist}>
+                    <AdminCheck label="Proof file attached" passed={Boolean(item.proofType)} />
+                    <AdminCheck label="Location available" passed={Boolean(item.locationLabel)} />
+                    <AdminCheck label="Requester contact verified" passed={Boolean(item.contactHint)} />
+                  </View>
+                  <Text style={styles.adminPanelTitle}>Signals</Text>
+                  <View style={styles.adminSignalWrap}>
+                    {(item.riskSignals ?? ["Review details before publishing"]).map(signal => (
+                      <View key={signal} style={styles.adminSignalPill}>
+                        <Text style={styles.adminSignalText}>{signal}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={styles.adminPanelTitle}>Admin urgency decision</Text>
+                  <View style={styles.adminUrgencyControl}>
+                    <Pressable style={styles.adminUrgencyButton} onPress={() => updateAdminUrgency(item.id, -1, adminUrgency)}>
+                      <Ionicons name="remove" size={18} color="#1652B7" />
+                    </Pressable>
+                    <View style={styles.adminUrgencyReadout}>
+                      <Text style={styles.adminUrgencyValue}>{adminUrgency}/10</Text>
+                      <Text style={styles.adminUrgencySub}>Final urgency</Text>
+                    </View>
+                    <Pressable style={styles.adminUrgencyButton} onPress={() => updateAdminUrgency(item.id, 1, adminUrgency)}>
+                      <Ionicons name="add" size={18} color="#1652B7" />
+                    </Pressable>
+                  </View>
+                  <TextInput
+                    value={note}
+                    onChangeText={text => setNotesById(current => ({ ...current, [item.id]: text }))}
+                    multiline
+                    placeholder="Admin note for demo review..."
+                    placeholderTextColor="#94A3B8"
+                    style={styles.adminNoteInput}
+                  />
+                  <Text style={styles.adminRequestMeta}>{item.contactHint ?? "Contact verification unavailable"}</Text>
+                </View>
+              ) : null}
               <View style={styles.adminActionRow}>
-                <Pressable style={[styles.adminActionButton, styles.adminRejectButton]} onPress={() => rejectRequest(item.id)}>
+                <Pressable style={[styles.adminActionButton, styles.adminRejectButton]} onPress={() => declineRequest(item)}>
                   <Text style={styles.adminRejectText}>Reject</Text>
                 </Pressable>
-                <Pressable style={[styles.adminActionButton, styles.adminApproveButton]} onPress={() => approveRequest(item.id)}>
+                <Pressable style={[styles.adminActionButton, styles.adminApproveButton]} onPress={() => publishRequest(item)}>
                   <Text style={styles.adminApproveText}>Approve & Publish</Text>
                 </Pressable>
               </View>
@@ -2529,6 +2686,42 @@ function AdminDashboardScreen({ navigation }: any) {
         }}
       />
     </Screen>
+  );
+}
+
+function AdminMetric({ icon, value, label, color }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string; color: string }) {
+  return (
+    <View style={styles.adminMetricCard}>
+      <Ionicons name={icon} size={19} color={color} />
+      <Text style={styles.adminMetricValue}>{value}</Text>
+      <Text style={styles.adminMetricLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function AdminFilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable style={[styles.adminFilterChip, active && styles.adminFilterChipActive]} onPress={onPress}>
+      <Text style={[styles.adminFilterText, active && styles.adminFilterTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function AdminFact({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  return (
+    <View style={styles.adminFact}>
+      <Ionicons name={icon} size={13} color="#64748B" />
+      <Text style={styles.adminFactText} numberOfLines={1}>{text}</Text>
+    </View>
+  );
+}
+
+function AdminCheck({ label, passed }: { label: string; passed: boolean }) {
+  return (
+    <View style={styles.adminCheckRow}>
+      <Ionicons name={passed ? "checkmark-circle" : "alert-circle"} size={17} color={passed ? "#059669" : "#E11D48"} />
+      <Text style={styles.adminCheckText}>{label}</Text>
+    </View>
   );
 }
 
@@ -2640,7 +2833,7 @@ export default function App() {
   const [showStartup, setShowStartup] = useState(true);
   const [themeMode, setThemeMode] = useState<AppThemeMode>("light");
   const [user, setUser] = useState<DemoUser | null>(null);
-  const [pendingRequests, setPendingRequests] = useState<PendingHelpRequest[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<PendingHelpRequest[]>(demoPendingRequests);
   const [approvedRequests, setApprovedRequests] = useState<Request[]>([]);
   const isDark = themeMode === "dark";
 
@@ -2725,6 +2918,7 @@ export default function App() {
               <Stack.Screen name="HelperTabs" component={HelperTabs} />
               <Stack.Screen name="Timeline" component={TimelineScreen} />
               <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} />
+              <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="AboutUs" component={AboutUsScreen} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
@@ -3232,21 +3426,61 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     backgroundColor: "#F8FAFF",
   },
-  adminSummaryCard: {
-    margin: 18,
+  adminSummaryGrid: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+  },
+  adminMetricCard: {
+    flex: 1,
     borderRadius: 18,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "rgba(22, 82, 183, 0.08)",
-    padding: 14,
-    flexDirection: "row",
+    paddingVertical: 13,
     alignItems: "center",
-    gap: 10,
   },
-  adminSummaryText: {
+  adminMetricValue: {
     color: "#172033",
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: "900",
+    marginTop: 5,
+  },
+  adminMetricLabel: {
+    color: "#64748B",
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  adminFilterRow: {
+    flexDirection: "row",
+    gap: 9,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  adminFilterChip: {
+    minHeight: 38,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminFilterChipActive: {
+    backgroundColor: "#1652B7",
+    borderColor: "#1652B7",
+  },
+  adminFilterText: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  adminFilterTextActive: {
+    color: "#FFFFFF",
   },
   adminRequestCard: {
     marginHorizontal: 18,
@@ -3277,6 +3511,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
   },
+  adminRequestTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  adminStatusPill: {
+    borderRadius: 999,
+    backgroundColor: "#EEF4FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  adminStatusPillNew: {
+    backgroundColor: "#FFF1F2",
+  },
+  adminStatusText: {
+    color: "#1652B7",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  adminStatusTextNew: {
+    color: "#E11D48",
+  },
   adminRequestCategory: {
     fontSize: 11,
     fontWeight: "900",
@@ -3294,6 +3550,123 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     marginTop: 8,
+  },
+  adminQuickFacts: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  adminFact: {
+    maxWidth: "100%",
+    borderRadius: 999,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "rgba(100, 116, 139, 0.12)",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  adminFactText: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "800",
+    maxWidth: 230,
+  },
+  adminDeepPanel: {
+    marginTop: 14,
+    borderRadius: 18,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 13,
+  },
+  adminPanelTitle: {
+    color: "#172033",
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  adminChecklist: {
+    gap: 7,
+    marginBottom: 12,
+  },
+  adminCheckRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  adminCheckText: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  adminSignalWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  adminSignalPill: {
+    borderRadius: 999,
+    backgroundColor: "#EAF2FF",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  adminSignalText: {
+    color: "#1652B7",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  adminUrgencyControl: {
+    minHeight: 58,
+    borderRadius: 17,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  adminUrgencyButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: "#EAF2FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminUrgencyReadout: {
+    alignItems: "center",
+  },
+  adminUrgencyValue: {
+    color: "#172033",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  adminUrgencySub: {
+    color: "#64748B",
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  adminNoteInput: {
+    minHeight: 72,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#1F2937",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlignVertical: "top",
   },
   adminActionRow: {
     flexDirection: "row",
