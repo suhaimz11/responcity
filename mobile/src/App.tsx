@@ -761,8 +761,10 @@ function categoryFor(id: string) {
   return categories.find(cat => cat.id === id) ?? categories[0];
 }
 
-function Screen({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
-  return <SafeAreaView style={[styles.safe, dark && styles.safeDark]}>{children}</SafeAreaView>;
+function Screen({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
+  const { isDark } = useAppTheme();
+  const useDark = dark ?? isDark;
+  return <SafeAreaView style={[styles.safe, useDark && styles.safeDark]}>{children}</SafeAreaView>;
 }
 
 function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void }) {
@@ -798,7 +800,9 @@ function ModeScreen({ navigation }: any) {
         <Ionicons name="settings-outline" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
       </Pressable>
       <View style={[styles.homeContent, isDark && styles.homeContentDark]}>
-        <Image source={emergeAidLogo} style={styles.homeLogo} />
+        <View style={[styles.homeLogoPlate, isDark && styles.homeLogoPlateDark]}>
+          <Image source={emergeAidLogo} style={styles.homeLogo} />
+        </View>
         <Text style={[styles.homeTitle, isDark && styles.homeTitleDark]}>How can Emerge Aid help?</Text>
         <Text style={[styles.homeSubtitle, isDark && styles.homeSubtitleDark]}>Community emergency assistance - available now</Text>
         <ModeCard
@@ -876,6 +880,7 @@ function HomeStat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap
 }
 
 function RequesterTabs({ navigation, route }: any) {
+  const { isDark } = useAppTheme();
   const [session, setSession] = useState<EmergencySession>(defaultEmergencySession);
   const lastUnlockToken = useRef<number | null>(null);
 
@@ -899,7 +904,7 @@ function RequesterTabs({ navigation, route }: any) {
   }, [navigation, route.params?.unlockCheckInToken]);
 
   return (
-    <Tab.Navigator screenOptions={tabOptions}>
+    <Tab.Navigator screenOptions={tabOptions(isDark)}>
       <Tab.Screen
         name="Home"
         options={{ tabBarIcon: tabIcon("home") }}
@@ -918,8 +923,10 @@ function RequesterTabs({ navigation, route }: any) {
 }
 
 function HelperTabs({ navigation }: any) {
+  const { isDark } = useAppTheme();
+
   return (
-    <Tab.Navigator screenOptions={tabOptions}>
+    <Tab.Navigator screenOptions={tabOptions(isDark)}>
       <Tab.Screen
         name="Requests"
         component={HelperHome}
@@ -936,19 +943,20 @@ function tabIcon(name: keyof typeof Ionicons.glyphMap) {
   return ({ color, size }: { color: string; size: number }) => <Ionicons name={name} color={color} size={size} />;
 }
 
-const tabOptions = {
+function tabOptions(isDark: boolean) {
+  return {
   headerShown: false,
   tabBarActiveTintColor: theme.red,
-  tabBarInactiveTintColor: "#6B7280",
+  tabBarInactiveTintColor: isDark ? "#94A3B8" : "#6B7280",
   tabBarStyle: {
     height: 70,
     paddingBottom: 12,
     paddingTop: 8,
-    backgroundColor: "rgba(255,255,255,0.94)",
-    borderTopColor: "rgba(22, 82, 183, 0.08)",
+    backgroundColor: isDark ? "#101C2F" : "rgba(255,255,255,0.94)",
+    borderTopColor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(22, 82, 183, 0.08)",
     borderTopWidth: 1,
     shadowColor: "#14213D",
-    shadowOpacity: 0.08,
+    shadowOpacity: isDark ? 0 : 0.08,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: -5 },
     elevation: 12,
@@ -957,9 +965,11 @@ const tabOptions = {
     fontSize: 11,
     fontWeight: "800" as const,
   },
-};
+  };
+}
 
 function RequesterHome({ navigation, route, rootNavigation: providedRootNavigation, onEmergencyRequest }: any) {
+  const { isDark } = useAppTheme();
   const [locationStatus, setLocationStatus] = useState("Location not shared yet");
   const [sosLaunching, setSosLaunching] = useState(false);
   const [nearbyRadiusKm, setNearbyRadiusKm] = useState(5);
@@ -1065,7 +1075,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
       <ScrollView contentContainerStyle={styles.scroll}>
         <RequesterHeader onSwitch={() => rootNavigation.navigate("Mode")} />
         <View style={styles.sosWrap}>
-          <Text style={styles.sosPrompt}>Press the button for immediate help</Text>
+        <Text style={[styles.sosPrompt, isDark && styles.textOnDark]}>Press the button for immediate help</Text>
           <View style={styles.sosRadarStage}>
             <Animated.View
               pointerEvents="none"
@@ -1111,16 +1121,16 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
               </LinearGradient>
             </Pressable>
           </View>
-          <Text style={styles.locationText}>{locationStatus}</Text>
+          <Text style={[styles.locationText, isDark && styles.mutedOnDark]}>{locationStatus}</Text>
         </View>
 
         <View style={styles.requestSectionHeader}>
-          <Text style={styles.requestSectionTitle}>Request Specific Help</Text>
+          <Text style={[styles.requestSectionTitle, isDark && styles.textOnDark]}>Request Specific Help</Text>
           <View style={styles.termsPill}>
             <Text style={styles.termsText}>T&C</Text>
           </View>
         </View>
-        <Text style={styles.requestSectionSub}>
+        <Text style={[styles.requestSectionSub, isDark && styles.mutedOnDark]}>
           Tap a category - you'll be asked for photo/video proof and a description
         </Text>
         <View style={styles.categoryGrid}>
@@ -1142,8 +1152,8 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
           ))}
         </View>
 
-        <Text style={styles.buddiesTitle}>My Buddies</Text>
-        <View style={styles.buddyCard}>
+        <Text style={[styles.buddiesTitle, isDark && styles.textOnDark]}>My Buddies</Text>
+        <View style={[styles.buddyCard, isDark && styles.surfaceDark]}>
           <View style={styles.buddyAvatar}>
             <Text style={styles.buddyInitial}>J</Text>
             <View style={styles.buddyOnline} />
@@ -1155,6 +1165,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
 }
 
 function RequestDetailsScreen({ navigation, route }: any) {
+  const { isDark } = useAppTheme();
   const category = categoryFor(route.params?.categoryId ?? "medical");
   const { submitForReview } = useRequestReview();
   const categoryPresets = requestPresetMessagesByCategory[category.id] ?? requestPresetMessagesByCategory.safety;
@@ -1295,7 +1306,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
       ) : null}
       <ScrollView contentContainerStyle={styles.detailScroll}>
         <RequesterHeader onSwitch={() => navigation.navigate("Mode")} />
-        <View style={styles.detailSheet}>
+        <View style={[styles.detailSheet, isDark && styles.detailSheetDark]}>
           <View style={styles.sheetHandle} />
           <View style={styles.detailTopRow}>
             <View style={[styles.detailCategoryPill, { backgroundColor: category.bg }]}>
@@ -1307,12 +1318,12 @@ function RequestDetailsScreen({ navigation, route }: any) {
             </Pressable>
           </View>
 
-          <Text style={styles.detailLabel}>Photo or Video Proof <Text style={styles.required}>*</Text></Text>
-          <Text style={styles.detailHelp}>Take a direct photo or short video (max 30s) to verify your emergency.</Text>
+          <Text style={[styles.detailLabel, isDark && styles.textOnDark]}>Photo or Video Proof <Text style={styles.required}>*</Text></Text>
+          <Text style={[styles.detailHelp, isDark && styles.mutedOnDark]}>Take a direct photo or short video (max 30s) to verify your emergency.</Text>
 
-          <View style={styles.proofBox}>
+          <View style={[styles.proofBox, isDark && styles.proofBoxDark]}>
             <Ionicons name={proofAsset ? "checkmark-circle" : "camera-outline"} size={34} color={proofAsset ? theme.green : "#9CA3AF"} />
-            <Text style={styles.proofText}>{proofAsset ? "Proof added" : "Add a photo or video as proof"}</Text>
+            <Text style={[styles.proofText, isDark && styles.mutedOnDark]}>{proofAsset ? "Proof added" : "Add a photo or video as proof"}</Text>
             {proofAsset ? (
               <View style={styles.proofSelectedPill}>
                 <Ionicons name={proofAsset.type === "video" ? "videocam" : "image"} size={16} color="#1652B7" />
@@ -1327,8 +1338,8 @@ function RequestDetailsScreen({ navigation, route }: any) {
             </Pressable>
           </View>
 
-          <Text style={styles.detailLabel}>Describe Your Situation <Text style={styles.required}>*</Text></Text>
-          <Text style={styles.presetHint}>Choose a preset or write your own.</Text>
+          <Text style={[styles.detailLabel, isDark && styles.textOnDark]}>Describe Your Situation <Text style={styles.required}>*</Text></Text>
+          <Text style={[styles.presetHint, isDark && styles.mutedOnDark]}>Choose a preset or write your own.</Text>
           <View style={styles.requestPresetGrid}>
             {categoryPresets.map(message => (
               <Pressable
@@ -1371,7 +1382,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
             </Pressable>
           </View>
           {customMessageOpen ? (
-            <View style={styles.customRequestBox}>
+            <View style={[styles.customRequestBox, isDark && styles.surfaceDark]}>
               <TextInput
                 value={customDescription}
                 onChangeText={setCustomDescription}
@@ -1379,16 +1390,16 @@ function RequestDetailsScreen({ navigation, route }: any) {
                 maxLength={300}
                 placeholder="Type your custom emergency message..."
                 placeholderTextColor="#8B95A1"
-                style={styles.detailInput}
+                style={[styles.detailInput, isDark && styles.inputDark]}
               />
             </View>
           ) : selectedPreset ? (
-            <View style={styles.describeMoreBox}>
+            <View style={[styles.describeMoreBox, isDark && styles.surfaceDark]}>
               <View style={styles.selectedPresetBox}>
                 <Ionicons name="checkmark-circle" size={18} color="#1652B7" />
                 <Text style={styles.selectedPresetText}>{selectedPreset}</Text>
               </View>
-              <Text style={styles.describeMoreLabel}>Describe more <Text style={styles.required}>*</Text></Text>
+              <Text style={[styles.describeMoreLabel, isDark && styles.textOnDark]}>Describe more <Text style={styles.required}>*</Text></Text>
               <TextInput
                 value={moreDetails}
                 onChangeText={setMoreDetails}
@@ -1396,21 +1407,21 @@ function RequestDetailsScreen({ navigation, route }: any) {
                 maxLength={220}
                 placeholder={detailPlaceholderFor(category.id)}
                 placeholderTextColor="#8B95A1"
-                style={styles.describeMoreInput}
+                style={[styles.describeMoreInput, isDark && styles.inputDark]}
               />
             </View>
           ) : null}
-          <Text style={styles.charCount}>{charCount}/300</Text>
+          <Text style={[styles.charCount, isDark && styles.mutedOnDark]}>{charCount}/300</Text>
 
-          <Text style={styles.detailLabel}>How urgent is it? <Text style={styles.required}>*</Text></Text>
-          <Text style={styles.presetHint}>Your rating helps triage faster. Admin will review and finalize urgency.</Text>
-          <View style={styles.urgencySliderCard}>
+          <Text style={[styles.detailLabel, isDark && styles.textOnDark]}>How urgent is it? <Text style={styles.required}>*</Text></Text>
+          <Text style={[styles.presetHint, isDark && styles.mutedOnDark]}>Your rating helps triage faster. Admin will review and finalize urgency.</Text>
+          <View style={[styles.urgencySliderCard, isDark && styles.surfaceDark]}>
             <View style={styles.urgencyValueRow}>
-              <Text style={styles.urgencyValueLabel}>User urgency</Text>
+              <Text style={[styles.urgencyValueLabel, isDark && styles.textOnDark]}>User urgency</Text>
               <Text style={styles.urgencyValue}>{userUrgency > 0 ? `${userUrgency}/10` : "Set level"}</Text>
             </View>
             <View
-              style={styles.urgencySliderTrack}
+              style={[styles.urgencySliderTrack, isDark && styles.trackDark]}
               onLayout={handleUrgencyTrackLayout}
               onStartShouldSetResponder={() => true}
               onMoveShouldSetResponder={() => true}
@@ -1421,37 +1432,37 @@ function RequestDetailsScreen({ navigation, route }: any) {
               <View style={[styles.urgencySliderThumb, { left: `${userUrgency > 0 ? ((userUrgency - 1) / 9) * 100 : 0}%` }]} />
             </View>
             <View style={styles.urgencySliderLabels}>
-              <Text style={styles.urgencySliderLabel}>1 Low</Text>
-              <Text style={styles.urgencySliderLabel}>10 Critical</Text>
+              <Text style={[styles.urgencySliderLabel, isDark && styles.mutedOnDark]}>1 Low</Text>
+              <Text style={[styles.urgencySliderLabel, isDark && styles.mutedOnDark]}>10 Critical</Text>
             </View>
           </View>
-          <View style={styles.urgencyReviewCard}>
+          <View style={[styles.urgencyReviewCard, isDark && styles.softPanelDark]}>
             <View style={styles.urgencyReviewHeader}>
               <Ionicons name="shield-checkmark" size={17} color="#1652B7" />
-              <Text style={styles.urgencyReviewTitle}>Admin finalizes urgency</Text>
+              <Text style={[styles.urgencyReviewTitle, isDark && styles.textOnDark]}>Admin finalizes urgency</Text>
             </View>
-            <Text style={styles.urgencyReviewText}>
+            <Text style={[styles.urgencyReviewText, isDark && styles.mutedOnDark]}>
               Demo: {urgencyExample.example}
             </Text>
             <View style={styles.urgencyReviewRow}>
-              <View style={styles.urgencyReviewPill}>
+              <View style={[styles.urgencyReviewPill, isDark && styles.surfaceDark]}>
                 <Text style={styles.urgencyReviewPillLabel}>User</Text>
                 <Text style={styles.urgencyReviewPillValue}>{urgencyExample.user}/10</Text>
               </View>
               <Ionicons name="arrow-forward" size={16} color="#64748B" />
-              <View style={[styles.urgencyReviewPill, styles.urgencyReviewAdminPill]}>
+              <View style={[styles.urgencyReviewPill, styles.urgencyReviewAdminPill, isDark && styles.softPillDark]}>
                 <Text style={styles.urgencyReviewPillLabel}>Admin</Text>
                 <Text style={styles.urgencyReviewPillValue}>{urgencyExample.admin}/10</Text>
               </View>
             </View>
           </View>
 
-          <Pressable style={styles.confirmBox} onPress={() => setConfirmed(value => !value)}>
+          <Pressable style={[styles.confirmBox, isDark && styles.confirmBoxDark]} onPress={() => setConfirmed(value => !value)}>
             <View style={[styles.checkboxBox, confirmed && styles.checkboxChecked]}>
               {confirmed ? <Ionicons name="checkmark" size={15} color="#fff" /> : null}
             </View>
             <View style={styles.confirmCopy}>
-              <Text style={styles.confirmText}>
+              <Text style={[styles.confirmText, isDark && styles.mutedOnDark]}>
                 This is <Text style={styles.confirmStrong}>NOT a fake request.</Text> I understand that submitting false
                 emergencies is a violation and admin may take action against my account.
               </Text>
@@ -1838,6 +1849,7 @@ function EmergencyContacts() {
 }
 
 function MissionHistoryScreen() {
+  const { isDark } = useAppTheme();
   const minRadiusKm = 0.1;
   const maxRadiusKm = 25;
   const [radiusKm, setRadiusKm] = useState(5);
@@ -1877,19 +1889,19 @@ function MissionHistoryScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.activityScroll}>
-        <Text style={styles.activityTitle}>Activity</Text>
+        <Text style={[styles.activityTitle, isDark && styles.textOnDark]}>Activity</Text>
 
-        <View style={styles.activityStatsCard}>
+        <View style={[styles.activityStatsCard, isDark && styles.surfaceDark]}>
           <ActivityStat icon="checkmark-done" value={String(visibleMissions.length)} label="Missions" color={theme.green} />
           <ActivityStat icon="leaf" value={String(totalPoints)} label="Points" color={theme.orange} />
           <ActivityStat icon="flame" value={String(streak)} label="Day Streak" color={theme.red} />
         </View>
 
-        <View style={styles.radiusCard}>
+        <View style={[styles.radiusCard, isDark && styles.surfaceDark]}>
           <View style={styles.radiusHeader}>
             <View>
-              <Text style={styles.radiusTitle}>Nearby radius</Text>
-              <Text style={styles.radiusSub}>Showing missions within {radiusLabel}</Text>
+              <Text style={[styles.radiusTitle, isDark && styles.textOnDark]}>Nearby radius</Text>
+              <Text style={[styles.radiusSub, isDark && styles.mutedOnDark]}>Showing missions within {radiusLabel}</Text>
             </View>
             {radiusEditing ? (
               <TextInput
@@ -1900,10 +1912,10 @@ function MissionHistoryScreen() {
                 keyboardType="decimal-pad"
                 autoFocus
                 selectTextOnFocus
-                style={styles.radiusInput}
+                style={[styles.radiusInput, isDark && styles.inputDark]}
               />
             ) : (
-              <Pressable style={styles.radiusBadge} onPress={() => {
+              <Pressable style={[styles.radiusBadge, isDark && styles.softPillDark]} onPress={() => {
                 setRadiusDraft(String(radiusKm));
                 setRadiusEditing(true);
               }}>
@@ -1919,7 +1931,7 @@ function MissionHistoryScreen() {
             onMoveShouldSetResponder={() => true}
             onResponderMove={updateRadiusFromTouch}
           >
-            <View style={styles.radiusTrack}>
+            <View style={[styles.radiusTrack, isDark && styles.trackDark]}>
               <View style={[styles.radiusTrackFill, { width: `${radiusProgress * 100}%` }]} />
               <View style={[styles.radiusThumb, { left: `${radiusProgress * 100}%` }]} />
             </View>
@@ -1931,8 +1943,8 @@ function MissionHistoryScreen() {
         </View>
 
         <View style={styles.activitySectionHeader}>
-          <Text style={styles.activitySectionTitle}>Mission History</Text>
-          <Text style={styles.activitySectionMeta}>{visibleMissions.length} nearby</Text>
+          <Text style={[styles.activitySectionTitle, isDark && styles.textOnDark]}>Mission History</Text>
+          <Text style={[styles.activitySectionMeta, isDark && styles.mutedOnDark]}>{visibleMissions.length} nearby</Text>
         </View>
 
         {visibleMissions.length > 0 ? (
@@ -1950,26 +1962,29 @@ function MissionHistoryScreen() {
 }
 
 function ActivityStat({ icon, value, label, color }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string; color: string }) {
+  const { isDark } = useAppTheme();
+
   return (
     <View style={styles.activityStat}>
       <Ionicons name={icon} size={20} color={color} />
-      <Text style={styles.activityStatValue}>{value}</Text>
-      <Text style={styles.activityStatLabel}>{label}</Text>
+      <Text style={[styles.activityStatValue, isDark && styles.textOnDark]}>{value}</Text>
+      <Text style={[styles.activityStatLabel, isDark && styles.mutedOnDark]}>{label}</Text>
     </View>
   );
 }
 
 function MissionHistoryCard({ mission }: { mission: MissionHistoryItem }) {
+  const { isDark } = useAppTheme();
   const category = categoryFor(mission.category);
   return (
-    <View style={styles.missionHistoryCard}>
+    <View style={[styles.missionHistoryCard, isDark && styles.surfaceDark]}>
       <View style={[styles.missionHistoryIcon, { backgroundColor: category.bg }]}>
         <Ionicons name={category.icon} size={22} color={category.color} />
       </View>
       <View style={styles.missionHistoryCopy}>
         <Text style={[styles.missionHistoryCategory, { color: category.color }]}>{category.label.toUpperCase()}</Text>
-        <Text style={styles.missionHistoryTitle}>{mission.title}</Text>
-        <Text style={styles.missionHistoryMeta}>{mission.date} - {mission.distanceKm.toFixed(1)} km away</Text>
+        <Text style={[styles.missionHistoryTitle, isDark && styles.textOnDark]}>{mission.title}</Text>
+        <Text style={[styles.missionHistoryMeta, isDark && styles.mutedOnDark]}>{mission.date} - {mission.distanceKm.toFixed(1)} km away</Text>
       </View>
       <View style={styles.pointsBadge}>
         <Text style={styles.pointsValue}>+{mission.points}</Text>
@@ -1980,6 +1995,7 @@ function MissionHistoryCard({ mission }: { mission: MissionHistoryItem }) {
 }
 
 function HelperHome({ navigation, route }: any) {
+  const { isDark } = useAppTheme();
   const rootNavigation = route.params?.rootNavigation ?? navigation;
   const { approvedRequests } = useRequestReview();
   const [activeChatRequest, setActiveChatRequest] = useState<Request | null>(null);
@@ -2081,8 +2097,8 @@ function HelperHome({ navigation, route }: any) {
             </LinearGradient>
 
             <View style={styles.helperListHeader}>
-              <Text style={styles.helperListTitle}>{helperTab === "open" ? "Open Requests" : "Emergency Requests"}</Text>
-              <Text style={styles.helperListSub}>{helperTab === "open" ? "People nearby asking for help" : "Highest urgency alerts near you"}</Text>
+              <Text style={[styles.helperListTitle, isDark && styles.textOnDark]}>{helperTab === "open" ? "Open Requests" : "Emergency Requests"}</Text>
+              <Text style={[styles.helperListSub, isDark && styles.mutedOnDark]}>{helperTab === "open" ? "People nearby asking for help" : "Highest urgency alerts near you"}</Text>
             </View>
           </>
         }
@@ -2096,9 +2112,10 @@ function HelperHome({ navigation, route }: any) {
 }
 
 function HelperRequestCard({ request, onAccept }: { request: Request; onAccept: () => void }) {
+  const { isDark } = useAppTheme();
   const cat = categoryFor(request.category);
   return (
-    <View style={[styles.requestCard, { borderLeftColor: cat.color }, request.urgent && styles.urgentCard]}>
+    <View style={[styles.requestCard, isDark && styles.surfaceDark, { borderLeftColor: cat.color }, request.urgent && styles.urgentCard]}>
       {request.buddy ? (
         <View style={styles.buddyRequestBadge}>
           <Ionicons name="star" size={12} color="#B45309" />
@@ -2111,7 +2128,7 @@ function HelperRequestCard({ request, onAccept }: { request: Request; onAccept: 
         </View>
         <View style={styles.requestCopy}>
           <View style={styles.requestNameRow}>
-            <Text style={styles.requestUserName}>{request.user}</Text>
+            <Text style={[styles.requestUserName, isDark && styles.textOnDark]}>{request.user}</Text>
             {request.urgent ? (
               <View style={styles.urgentPill}>
                 <Text style={styles.urgentPillText}>URGENT</Text>
@@ -2119,7 +2136,7 @@ function HelperRequestCard({ request, onAccept }: { request: Request; onAccept: 
             ) : null}
           </View>
           <Text style={[styles.requestCategoryText, { color: cat.color }]}>{cat.label.toUpperCase()}</Text>
-          <Text style={styles.requestMessage}>{request.message}</Text>
+          <Text style={[styles.requestMessage, isDark && styles.mutedOnDark]}>{request.message}</Text>
           <Text style={styles.metaText}>{request.distance} - {request.timeAgo ?? request.eta}</Text>
         </View>
       </View>
@@ -2131,6 +2148,7 @@ function HelperRequestCard({ request, onAccept }: { request: Request; onAccept: 
 }
 
 function MissionChat({ request, onBack }: { request: Request; onBack: () => void }) {
+  const { isDark } = useAppTheme();
   const [messages, setMessages] = useState<MissionChatMessage[]>([
     { id: 1, from: "system", text: `Mission accepted. ETA ${request.eta}.` },
     { id: 2, from: "them", text: request.message },
@@ -2148,7 +2166,7 @@ function MissionChat({ request, onBack }: { request: Request; onBack: () => void
 
   return (
     <Screen>
-      <View style={styles.chatScreen}>
+      <View style={[styles.chatScreen, isDark && styles.darkScreen]}>
         <LinearGradient colors={["#1652B7", "#2F75C8"]} style={styles.chatHeader}>
           <Pressable style={styles.chatBackButton} onPress={onBack}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
@@ -2185,8 +2203,8 @@ function MissionChat({ request, onBack }: { request: Request; onBack: () => void
           ))}
         </ScrollView>
 
-        <View style={styles.presetPanel}>
-          <Text style={styles.presetTitle}>Quick messages</Text>
+        <View style={[styles.presetPanel, isDark && styles.surfaceDark]}>
+          <Text style={[styles.presetTitle, isDark && styles.mutedOnDark]}>Quick messages</Text>
           <View style={styles.presetGrid}>
             {presetChatMessages.map(message => (
               <Pressable key={message} style={({ pressed }) => [styles.presetChip, pressed && styles.categoryPressed]} onPress={() => sendMessage(message)}>
@@ -2247,14 +2265,15 @@ function RequestCard({ request, onAccept }: { request: Request; onAccept: () => 
 }
 
 function ResponderMap() {
+  const { isDark } = useAppTheme();
   const [communityTab, setCommunityTab] = useState<"feed" | "groups">("feed");
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.communityScroll}>
-        <Text style={styles.communityTitle}>Community</Text>
+        <Text style={[styles.communityTitle, isDark && styles.textOnDark]}>Community</Text>
 
-        <View style={styles.communitySlider}>
+        <View style={[styles.communitySlider, isDark && styles.segmentDark]}>
           <View style={[styles.communitySliderThumb, communityTab === "groups" && styles.communitySliderThumbRight]} />
           <Pressable style={styles.communitySliderOption} onPress={() => setCommunityTab("feed")}>
             <Text style={[styles.communitySliderText, communityTab === "feed" && styles.communitySliderTextActive]}>Feed</Text>
@@ -2264,14 +2283,14 @@ function ResponderMap() {
           </Pressable>
         </View>
 
-        <View style={styles.orgInfoCard}>
+        <View style={[styles.orgInfoCard, isDark && styles.surfaceDark]}>
           <View style={styles.orgInfoHeader}>
             <View style={styles.orgMark}>
               <Ionicons name="ribbon" size={24} color="#1652B7" />
             </View>
             <View style={styles.orgInfoCopy}>
-              <Text style={styles.orgName}>{helperOrganisation.name}</Text>
-              <Text style={styles.orgRole}>{helperOrganisation.role}</Text>
+              <Text style={[styles.orgName, isDark && styles.textOnDark]}>{helperOrganisation.name}</Text>
+              <Text style={[styles.orgRole, isDark && styles.mutedOnDark]}>{helperOrganisation.role}</Text>
             </View>
             <View style={styles.orgTypePill}>
               <Text style={styles.orgTypeText}>{helperOrganisation.type}</Text>
@@ -2287,7 +2306,7 @@ function ResponderMap() {
 
         {communityTab === "feed" ? (
           <>
-            <View style={styles.communityTrustCard}>
+            <View style={[styles.communityTrustCard, isDark && styles.surfaceDark]}>
               <CommunityTrustLine icon="shield-checkmark" text="Verified by NGO, NPO, trust or trusted organisation" />
               <CommunityTrustLine icon="star" text="Community helper rating and mission reputation shown" />
             </View>
@@ -2304,37 +2323,43 @@ function ResponderMap() {
 }
 
 function OrgMeta({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+  const { isDark } = useAppTheme();
+
   return (
     <View style={styles.orgMetaItem}>
       <Ionicons name={icon} size={15} color="#1652B7" />
-      <Text style={styles.orgMetaLabel}>{label}</Text>
-      <Text style={styles.orgMetaValue}>{value}</Text>
+      <Text style={[styles.orgMetaLabel, isDark && styles.mutedOnDark]}>{label}</Text>
+      <Text style={[styles.orgMetaValue, isDark && styles.textOnDark]}>{value}</Text>
     </View>
   );
 }
 
 function CommunityTrustLine({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  const { isDark } = useAppTheme();
+
   return (
     <View style={styles.communityTrustLine}>
       <Ionicons name={icon} size={16} color="#1652B7" />
-      <Text style={styles.communityTrustText}>{text}</Text>
+      <Text style={[styles.communityTrustText, isDark && styles.mutedOnDark]}>{text}</Text>
     </View>
   );
 }
 
 function CommunityPostCard({ post }: { post: CommunityPost }) {
+  const { isDark } = useAppTheme();
+
   return (
-    <View style={styles.communityPostCard}>
+    <View style={[styles.communityPostCard, isDark && styles.surfaceDark]}>
       <View style={styles.communityPostHeader}>
         <View style={[styles.communityAvatar, { backgroundColor: post.color }]}>
           <Text style={styles.communityAvatarText}>{post.author.slice(0, 1)}</Text>
         </View>
         <View style={styles.communityPostCopy}>
           <View style={styles.communityNameRow}>
-            <Text style={styles.communityAuthor}>{post.author}</Text>
+            <Text style={[styles.communityAuthor, isDark && styles.textOnDark]}>{post.author}</Text>
             {post.rating ? <Text style={styles.communityRating}>★ {post.rating}</Text> : null}
           </View>
-          <Text style={styles.communityTime}>{post.time}</Text>
+          <Text style={[styles.communityTime, isDark && styles.mutedOnDark]}>{post.time}</Text>
           {post.org ? (
             <View style={styles.communityOrgPill}>
               <Ionicons name="ribbon" size={12} color="#1652B7" />
@@ -2348,7 +2373,7 @@ function CommunityPostCard({ post }: { post: CommunityPost }) {
           </View>
         ) : null}
       </View>
-      <Text style={styles.communityMessage}>{post.message}</Text>
+      <Text style={[styles.communityMessage, isDark && styles.textOnDark]}>{post.message}</Text>
       <View style={styles.communityLikeRow}>
         <Ionicons name="heart-outline" size={16} color="#64748B" />
         <Text style={styles.communityLikes}>{post.likes}</Text>
@@ -2358,25 +2383,27 @@ function CommunityPostCard({ post }: { post: CommunityPost }) {
 }
 
 function GroupMissionCard({ mission }: { mission: GroupMission }) {
+  const { isDark } = useAppTheme();
+
   return (
-    <View style={[styles.groupMissionCard, mission.urgent && styles.groupMissionUrgent]}>
+    <View style={[styles.groupMissionCard, isDark && styles.surfaceDark, mission.urgent && styles.groupMissionUrgent]}>
       <View style={styles.groupMissionHeader}>
         <View style={styles.groupMissionIcon}>
           <Ionicons name="people" size={22} color="#1652B7" />
         </View>
         <View style={styles.groupMissionCopy}>
           <View style={styles.communityNameRow}>
-            <Text style={styles.groupMissionTitle}>{mission.title}</Text>
+            <Text style={[styles.groupMissionTitle, isDark && styles.textOnDark]}>{mission.title}</Text>
             {mission.urgent ? (
               <View style={styles.urgentPill}>
                 <Text style={styles.urgentPillText}>URGENT</Text>
               </View>
             ) : null}
           </View>
-          <Text style={styles.groupMissionOrg}>{mission.org}</Text>
+          <Text style={[styles.groupMissionOrg, isDark && styles.mutedOnDark]}>{mission.org}</Text>
         </View>
       </View>
-      <Text style={styles.groupMissionNeed}>{mission.need}</Text>
+      <Text style={[styles.groupMissionNeed, isDark && styles.textOnDark]}>{mission.need}</Text>
       <View style={styles.groupMissionFooter}>
         <Text style={styles.groupMissionMeta}>{mission.location}</Text>
         <Text style={styles.groupMissionSlots}>{mission.slots}</Text>
@@ -2411,11 +2438,13 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function InfoCard({ title, lines }: { title: string; lines: string[] }) {
+  const { isDark } = useAppTheme();
+
   return (
-    <View style={styles.infoCard}>
-      <Text style={styles.cardTitle}>{title}</Text>
+    <View style={[styles.infoCard, isDark && styles.surfaceDark]}>
+      <Text style={[styles.cardTitle, isDark && styles.textOnDark]}>{title}</Text>
       {lines.map(line => (
-        <Text key={line} style={styles.cardSub}>{line}</Text>
+        <Text key={line} style={[styles.cardSub, isDark && styles.mutedOnDark]}>{line}</Text>
       ))}
     </View>
   );
@@ -2434,9 +2463,11 @@ function LegalScreen({
   sections: LegalSection[];
   updated?: string;
 }) {
+  const { isDark } = useAppTheme();
+
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.legalScroll}>
+      <ScrollView contentContainerStyle={[styles.legalScroll, isDark && styles.darkScreen]}>
         <LinearGradient colors={["#EFF6FF", "#ECFEFF"]} style={styles.legalHero}>
           <Pressable style={styles.legalBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#1B2A6B" />
@@ -2448,21 +2479,21 @@ function LegalScreen({
         </LinearGradient>
 
         {sections.map((section, index) => (
-          <View key={section.title} style={styles.legalCard}>
+          <View key={section.title} style={[styles.legalCard, isDark && styles.surfaceDark]}>
             <View style={[styles.legalAccent, { backgroundColor: section.accent ?? "#2563EB" }]} />
             <View style={styles.legalCardHeader}>
               <Text style={styles.legalNumber}>{String(index + 1).padStart(2, "0")}</Text>
-              <Text style={styles.legalSectionTitle}>{section.title}</Text>
+              <Text style={[styles.legalSectionTitle, isDark && styles.textOnDark]}>{section.title}</Text>
             </View>
             {section.body.map(paragraph => (
-              <Text key={paragraph} style={styles.legalParagraph}>{paragraph}</Text>
+              <Text key={paragraph} style={[styles.legalParagraph, isDark && styles.mutedOnDark]}>{paragraph}</Text>
             ))}
           </View>
         ))}
 
-        <View style={styles.legalFooter}>
-          <Text style={styles.legalFooterTitle}>Emerge Aid</Text>
-          <Text style={styles.legalFooterText}>Help is just a tap away</Text>
+        <View style={[styles.legalFooter, isDark && styles.surfaceDark]}>
+          <Text style={[styles.legalFooterTitle, isDark && styles.textOnDark]}>Emerge Aid</Text>
+          <Text style={[styles.legalFooterText, isDark && styles.mutedOnDark]}>Help is just a tap away</Text>
           <Text style={styles.legalFooterEmail}>{contactEmail}</Text>
           {updated ? <Text style={styles.legalUpdated}>{updated}</Text> : null}
         </View>
@@ -2496,6 +2527,7 @@ function PrivacyPolicyScreen({ navigation }: any) {
 
 function LoginScreen({ navigation }: any) {
   const { login, signup } = useAuth();
+  const { isDark } = useAppTheme();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [name, setName] = useState("");
   const [identifier, setIdentifier] = useState("");
@@ -2524,14 +2556,18 @@ function LoginScreen({ navigation }: any) {
 
   return (
     <Screen>
-      <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.authScroll}>
-        <Image source={emergeAidLogo} style={styles.authLogo} />
-        <Text style={styles.authTitle}>Welcome to Emerge Aid</Text>
-        <Text style={styles.authSub}>Sign in to request help, respond nearby, or review emergency posts.</Text>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <ScrollView contentContainerStyle={[styles.authScroll, isDark && styles.authScrollDark]}>
+        <View style={styles.authBrandBlock}>
+          <View style={[styles.authLogoPlate, isDark && styles.authLogoPlateDark]}>
+            <Image source={emergeAidLogo} style={styles.authLogo} />
+          </View>
+        </View>
+        <Text style={[styles.authTitle, isDark && styles.authTitleDark]}>Welcome to Emerge Aid</Text>
+        <Text style={[styles.authSub, isDark && styles.authSubDark]}>Sign in to request help, respond nearby, or review emergency posts.</Text>
 
-        <View style={styles.authCard}>
-          <View style={styles.authModeSwitch}>
+        <View style={[styles.authCard, isDark && styles.authCardDark]}>
+          <View style={[styles.authModeSwitch, isDark && styles.authModeSwitchDark]}>
             <Pressable style={[styles.authModeButton, mode === "login" && styles.authModeButtonActive]} onPress={() => setMode("login")}>
               <Text style={[styles.authModeText, mode === "login" && styles.authModeTextActive]}>Login</Text>
             </Pressable>
@@ -2546,7 +2582,7 @@ function LoginScreen({ navigation }: any) {
               onChangeText={setName}
               placeholder="Full name"
               placeholderTextColor="#8B95A1"
-              style={styles.authInput}
+              style={[styles.authInput, isDark && styles.authInputDark]}
             />
           ) : null}
           <TextInput
@@ -2556,7 +2592,7 @@ function LoginScreen({ navigation }: any) {
             keyboardType="email-address"
             placeholder="Username or email"
             placeholderTextColor="#8B95A1"
-            style={styles.authInput}
+            style={[styles.authInput, isDark && styles.authInputDark]}
           />
           <TextInput
             value={password}
@@ -2564,7 +2600,7 @@ function LoginScreen({ navigation }: any) {
             secureTextEntry
             placeholder="Password"
             placeholderTextColor="#8B95A1"
-            style={styles.authInput}
+            style={[styles.authInput, isDark && styles.authInputDark]}
           />
 
           <Pressable style={styles.authSubmitButton} onPress={submitAuth}>
@@ -2578,6 +2614,7 @@ function LoginScreen({ navigation }: any) {
 }
 
 function AdminDashboardScreen({ navigation }: any) {
+  const { isDark } = useAppTheme();
   const { user, logout } = useAuth();
   const { pendingRequests, approveRequest, rejectRequest } = useRequestReview();
   const [filter, setFilter] = useState<"all" | "critical" | "proof">("all");
@@ -2652,12 +2689,12 @@ function AdminDashboardScreen({ navigation }: any) {
         }
         data={visibleRequests}
         keyExtractor={item => item.id}
-        contentContainerStyle={styles.adminList}
+        contentContainerStyle={[styles.adminList, isDark && styles.darkScreen]}
         ListEmptyComponent={
-          <View style={styles.adminEmptyCard}>
+          <View style={[styles.adminEmptyCard, isDark && styles.surfaceDark]}>
             <Ionicons name="checkmark-done-circle" size={34} color={theme.green} />
-            <Text style={styles.adminEmptyTitle}>No pending requests</Text>
-            <Text style={styles.adminEmptySub}>New help requests will appear here before going live.</Text>
+            <Text style={[styles.adminEmptyTitle, isDark && styles.textOnDark]}>No pending requests</Text>
+            <Text style={[styles.adminEmptySub, isDark && styles.mutedOnDark]}>New help requests will appear here before going live.</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -2666,14 +2703,14 @@ function AdminDashboardScreen({ navigation }: any) {
           const adminUrgency = adminUrgencyById[item.id] ?? item.adminUrgency ?? item.userUrgency;
           const note = notesById[item.id] ?? "";
           return (
-            <View style={styles.adminRequestCard}>
+            <View style={[styles.adminRequestCard, isDark && styles.surfaceDark]}>
               <Pressable style={styles.adminRequestHeader} onPress={() => setExpandedId(expanded ? null : item.id)}>
                 <View style={[styles.adminRequestIcon, { backgroundColor: cat.bg }]}>
                   <Ionicons name={cat.icon} size={22} color={cat.color} />
                 </View>
                 <View style={styles.adminRequestCopy}>
                   <View style={styles.adminRequestTitleRow}>
-                    <Text style={styles.adminRequestUser}>{item.user}</Text>
+                    <Text style={[styles.adminRequestUser, isDark && styles.textOnDark]}>{item.user}</Text>
                     <View style={[styles.adminStatusPill, item.status === "new" && styles.adminStatusPillNew]}>
                       <Text style={[styles.adminStatusText, item.status === "new" && styles.adminStatusTextNew]}>{item.status === "new" ? "NEW" : "REVIEWING"}</Text>
                     </View>
@@ -2682,21 +2719,21 @@ function AdminDashboardScreen({ navigation }: any) {
                 </View>
                 <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
               </Pressable>
-              <Text style={styles.adminRequestMessage}>{item.message}</Text>
+              <Text style={[styles.adminRequestMessage, isDark && styles.textOnDark]}>{item.message}</Text>
               <View style={styles.adminQuickFacts}>
                 <AdminFact icon="location" text={item.locationLabel ?? item.distance} />
                 <AdminFact icon={item.proofType === "video" ? "videocam" : "camera"} text={item.proofType ? `${item.proofType} proof` : "No proof"} />
                 <AdminFact icon="time" text={item.submittedAt} />
               </View>
               {expanded ? (
-                <View style={styles.adminDeepPanel}>
-                  <Text style={styles.adminPanelTitle}>Verification checklist</Text>
+                <View style={[styles.adminDeepPanel, isDark && styles.softPanelDark]}>
+                  <Text style={[styles.adminPanelTitle, isDark && styles.textOnDark]}>Verification checklist</Text>
                   <View style={styles.adminChecklist}>
                     <AdminCheck label="Proof file attached" passed={Boolean(item.proofType)} />
                     <AdminCheck label="Location available" passed={Boolean(item.locationLabel)} />
                     <AdminCheck label="Requester contact verified" passed={Boolean(item.contactHint)} />
                   </View>
-                  <Text style={styles.adminPanelTitle}>Signals</Text>
+                  <Text style={[styles.adminPanelTitle, isDark && styles.textOnDark]}>Signals</Text>
                   <View style={styles.adminSignalWrap}>
                     {(item.riskSignals ?? ["Review details before publishing"]).map(signal => (
                       <View key={signal} style={styles.adminSignalPill}>
@@ -2704,14 +2741,14 @@ function AdminDashboardScreen({ navigation }: any) {
                       </View>
                     ))}
                   </View>
-                  <Text style={styles.adminPanelTitle}>Admin urgency decision</Text>
-                  <View style={styles.adminUrgencyControl}>
+                  <Text style={[styles.adminPanelTitle, isDark && styles.textOnDark]}>Admin urgency decision</Text>
+                  <View style={[styles.adminUrgencyControl, isDark && styles.surfaceDark]}>
                     <Pressable style={styles.adminUrgencyButton} onPress={() => updateAdminUrgency(item.id, -1, adminUrgency)}>
                       <Ionicons name="remove" size={18} color="#1652B7" />
                     </Pressable>
                     <View style={styles.adminUrgencyReadout}>
-                      <Text style={styles.adminUrgencyValue}>{adminUrgency}/10</Text>
-                      <Text style={styles.adminUrgencySub}>Final urgency</Text>
+                      <Text style={[styles.adminUrgencyValue, isDark && styles.textOnDark]}>{adminUrgency}/10</Text>
+                      <Text style={[styles.adminUrgencySub, isDark && styles.mutedOnDark]}>Final urgency</Text>
                     </View>
                     <Pressable style={styles.adminUrgencyButton} onPress={() => updateAdminUrgency(item.id, 1, adminUrgency)}>
                       <Ionicons name="add" size={18} color="#1652B7" />
@@ -2723,7 +2760,7 @@ function AdminDashboardScreen({ navigation }: any) {
                     multiline
                     placeholder="Admin note for demo review..."
                     placeholderTextColor="#94A3B8"
-                    style={styles.adminNoteInput}
+                    style={[styles.adminNoteInput, isDark && styles.inputDark]}
                   />
                   <Text style={styles.adminRequestMeta}>{item.contactHint ?? "Contact verification unavailable"}</Text>
                 </View>
@@ -2845,10 +2882,10 @@ function SettingsScreen({ navigation }: any) {
           <Text style={[styles.settingsContactText, isDark && styles.settingsContactTextDark]}>
             For business enquiries, suggestions, feedback, partnerships, or app support, contact us at:
           </Text>
-          <Text style={styles.settingsContactEmail}>{contactEmail}</Text>
+          <Text style={[styles.settingsContactEmail, isDark && styles.settingsContactEmailDark]}>{contactEmail}</Text>
         </View>
 
-        <Pressable style={({ pressed }) => [styles.settingsLogoutButton, pressed && styles.categoryPressed]} onPress={signOut}>
+        <Pressable style={({ pressed }) => [styles.settingsLogoutButton, isDark && styles.settingsLogoutButtonDark, pressed && styles.categoryPressed]} onPress={signOut}>
           <Ionicons name="log-out-outline" size={18} color="#E11D48" />
           <Text style={styles.settingsLogoutText}>Log out</Text>
         </Pressable>
@@ -3074,7 +3111,40 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFCFF",
   },
   safeDark: {
-    backgroundColor: "#08111F",
+    backgroundColor: "#07111F",
+  },
+  darkScreen: {
+    backgroundColor: "#07111F",
+  },
+  surfaceDark: {
+    backgroundColor: "#101C2F",
+    borderColor: "rgba(148, 163, 184, 0.18)",
+    shadowOpacity: 0,
+  },
+  softPanelDark: {
+    backgroundColor: "#0D1A2B",
+    borderColor: "rgba(148, 163, 184, 0.16)",
+  },
+  softPillDark: {
+    backgroundColor: "rgba(37, 99, 235, 0.18)",
+    borderColor: "rgba(147, 197, 253, 0.18)",
+  },
+  segmentDark: {
+    backgroundColor: "#0D1A2B",
+  },
+  trackDark: {
+    backgroundColor: "#1F2B3D",
+  },
+  inputDark: {
+    backgroundColor: "#07111F",
+    borderColor: "rgba(148, 163, 184, 0.24)",
+    color: "#F8FAFC",
+  },
+  textOnDark: {
+    color: "#F8FAFC",
+  },
+  mutedOnDark: {
+    color: "#94A3B8",
   },
   scroll: {
     paddingBottom: 28,
@@ -3147,12 +3217,12 @@ const styles = StyleSheet.create({
   homeContent: {
     flex: 1,
     paddingHorizontal: 22,
-    paddingTop: 54,
+    paddingTop: 50,
     paddingBottom: 22,
     alignItems: "center",
   },
   homeContentDark: {
-    backgroundColor: "#08111F",
+    backgroundColor: "#07111F",
   },
   homeSettingsButton: {
     position: "absolute",
@@ -3174,14 +3244,31 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   homeSettingsButtonDark: {
-    backgroundColor: "#111C2E",
-    borderColor: "rgba(147, 197, 253, 0.16)",
+    backgroundColor: "#101C2F",
+    borderColor: "rgba(148, 163, 184, 0.22)",
+  },
+  homeLogoPlate: {
+    width: 142,
+    height: 118,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  homeLogoPlateDark: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    shadowColor: "#000",
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
   homeLogo: {
-    width: 172,
-    height: 172,
+    width: 128,
+    height: 104,
     resizeMode: "contain",
-    marginBottom: 22,
   },
   homeTitle: {
     color: "#192238",
@@ -3263,8 +3350,9 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   homeStatsCardDark: {
-    backgroundColor: "#111C2E",
-    borderColor: "rgba(147, 197, 253, 0.14)",
+    backgroundColor: "#101C2F",
+    borderColor: "rgba(148, 163, 184, 0.18)",
+    shadowOpacity: 0,
   },
   homeStat: {
     flex: 1,
@@ -3328,22 +3416,43 @@ const styles = StyleSheet.create({
   authScroll: {
     flexGrow: 1,
     paddingHorizontal: 22,
-    paddingTop: 54,
+    paddingTop: 72,
     paddingBottom: 28,
     alignItems: "center",
     backgroundColor: "#FAFCFF",
   },
+  authScrollDark: {
+    backgroundColor: "#07111F",
+  },
+  authBrandBlock: {
+    alignItems: "center",
+    marginBottom: 22,
+  },
+  authLogoPlate: {
+    width: 112,
+    height: 92,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  authLogoPlateDark: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
   authLogo: {
-    width: 142,
-    height: 142,
+    width: 102,
+    height: 82,
     resizeMode: "contain",
-    marginBottom: 18,
   },
   authTitle: {
     color: "#172033",
-    fontSize: 27,
+    fontSize: 28,
     fontWeight: "900",
     textAlign: "center",
+  },
+  authTitleDark: {
+    color: "#F8FAFC",
   },
   authSub: {
     color: "#64748B",
@@ -3352,28 +3461,39 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
     marginTop: 8,
-    marginBottom: 22,
+    marginBottom: 28,
+  },
+  authSubDark: {
+    color: "#94A3B8",
   },
   authCard: {
     width: "100%",
-    borderRadius: 24,
+    borderRadius: 22,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "rgba(22, 82, 183, 0.08)",
-    padding: 16,
+    padding: 14,
     shadowColor: "#14213D",
     shadowOpacity: 0.1,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
   },
+  authCardDark: {
+    backgroundColor: "#0D1828",
+    borderColor: "rgba(148, 163, 184, 0.22)",
+    shadowOpacity: 0,
+  },
   authModeSwitch: {
     height: 48,
-    borderRadius: 16,
+    borderRadius: 15,
     backgroundColor: "#EEF4FF",
     flexDirection: "row",
     padding: 4,
     marginBottom: 14,
+  },
+  authModeSwitchDark: {
+    backgroundColor: "#081321",
   },
   authModeButton: {
     flex: 1,
@@ -3403,6 +3523,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 10,
+  },
+  authInputDark: {
+    backgroundColor: "#081321",
+    borderColor: "rgba(148, 163, 184, 0.24)",
+    color: "#F8FAFC",
   },
   authSubmitButton: {
     height: 54,
@@ -3783,7 +3908,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFF",
   },
   settingsScrollDark: {
-    backgroundColor: "#08111F",
+    backgroundColor: "#07111F",
   },
   settingsHeader: {
     flexDirection: "row",
@@ -3802,8 +3927,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   settingsBackButtonDark: {
-    backgroundColor: "#111C2E",
-    borderColor: "rgba(147, 197, 253, 0.14)",
+    backgroundColor: "#101C2F",
+    borderColor: "rgba(148, 163, 184, 0.18)",
   },
   settingsEyebrow: {
     color: "#1652B7",
@@ -3837,8 +3962,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   settingsCardDark: {
-    backgroundColor: "#111C2E",
-    borderColor: "rgba(147, 197, 253, 0.14)",
+    backgroundColor: "#101C2F",
+    borderColor: "rgba(148, 163, 184, 0.18)",
     shadowOpacity: 0,
   },
   settingsRow: {
@@ -3905,8 +4030,8 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   settingsContactCardDark: {
-    backgroundColor: "#111C2E",
-    borderColor: "rgba(147, 197, 253, 0.14)",
+    backgroundColor: "#101C2F",
+    borderColor: "rgba(148, 163, 184, 0.18)",
   },
   settingsContactTitle: {
     color: "#172033",
@@ -3933,6 +4058,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 12,
   },
+  settingsContactEmailDark: {
+    color: "#93C5FD",
+  },
   settingsLogoutButton: {
     minHeight: 50,
     borderRadius: 17,
@@ -3944,6 +4072,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     marginTop: 14,
+  },
+  settingsLogoutButtonDark: {
+    backgroundColor: "rgba(225, 29, 72, 0.12)",
+    borderColor: "rgba(248, 113, 113, 0.22)",
   },
   settingsLogoutText: {
     color: "#E11D48",
@@ -4460,6 +4592,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -3 },
     elevation: 4,
   },
+  detailSheetDark: {
+    backgroundColor: "#07111F",
+    shadowOpacity: 0,
+  },
   sheetHandle: {
     alignSelf: "center",
     width: 48,
@@ -4647,6 +4783,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 18,
     marginBottom: 26,
+  },
+  proofBoxDark: {
+    borderColor: "rgba(148, 163, 184, 0.28)",
+    backgroundColor: "#0D1A2B",
   },
   proofText: {
     color: "#6B7280",
@@ -4859,6 +4999,10 @@ const styles = StyleSheet.create({
     padding: 14,
     flexDirection: "row",
     gap: 12,
+  },
+  confirmBoxDark: {
+    backgroundColor: "rgba(225, 29, 72, 0.1)",
+    borderColor: "rgba(248, 113, 113, 0.28)",
   },
   checkboxBox: {
     width: 24,
