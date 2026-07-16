@@ -1799,6 +1799,13 @@ function formatElapsed(totalSeconds: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatRadius(radiusKm: number) {
+  if (radiusKm < 1) {
+    return `${Math.round(radiusKm * 1000)} m`;
+  }
+  return `${Number.isInteger(radiusKm) ? radiusKm : radiusKm.toFixed(1)} km`;
+}
+
 function detailPlaceholderFor(categoryId: string) {
   switch (categoryId) {
     case "medical":
@@ -1831,11 +1838,41 @@ function EmergencyContacts() {
 }
 
 function MissionHistoryScreen() {
-  const radiusOptions = [1, 3, 5, 10, 25];
+  const minRadiusKm = 0.1;
+  const maxRadiusKm = 25;
   const [radiusKm, setRadiusKm] = useState(5);
+  const [radiusTrackWidth, setRadiusTrackWidth] = useState(0);
+  const [radiusEditing, setRadiusEditing] = useState(false);
+  const [radiusDraft, setRadiusDraft] = useState("5");
   const visibleMissions = nearbyMissionHistory.filter(mission => mission.distanceKm <= radiusKm);
   const totalPoints = visibleMissions.reduce((sum, mission) => sum + mission.points, 0);
   const streak = Math.min(7, Math.max(1, visibleMissions.length));
+  const radiusProgress = Math.max(0, Math.min(1, (radiusKm - minRadiusKm) / (maxRadiusKm - minRadiusKm)));
+  const radiusLabel = formatRadius(radiusKm);
+
+  function setClampedRadius(value: number) {
+    const clamped = Math.max(minRadiusKm, Math.min(maxRadiusKm, value));
+    const rounded = clamped < 1 ? Math.round(clamped * 10) / 10 : Math.round(clamped * 10) / 10;
+    setRadiusKm(rounded);
+    setRadiusDraft(String(rounded));
+  }
+
+  function updateRadiusFromTouch(event: GestureResponderEvent) {
+    if (radiusTrackWidth <= 0) return;
+    const x = Math.max(0, Math.min(event.nativeEvent.locationX, radiusTrackWidth));
+    const nextValue = minRadiusKm + (x / radiusTrackWidth) * (maxRadiusKm - minRadiusKm);
+    setClampedRadius(nextValue);
+  }
+
+  function submitRadiusDraft() {
+    const parsed = Number(radiusDraft.replace(",", "."));
+    if (Number.isFinite(parsed)) {
+      setClampedRadius(parsed);
+    } else {
+      setRadiusDraft(String(radiusKm));
+    }
+    setRadiusEditing(false);
+  }
 
   return (
     <Screen>
@@ -1852,26 +1889,44 @@ function MissionHistoryScreen() {
           <View style={styles.radiusHeader}>
             <View>
               <Text style={styles.radiusTitle}>Nearby radius</Text>
-              <Text style={styles.radiusSub}>Showing missions within {radiusKm} km</Text>
+              <Text style={styles.radiusSub}>Showing missions within {radiusLabel}</Text>
             </View>
-            <View style={styles.radiusBadge}>
-              <Text style={styles.radiusBadgeText}>{radiusKm} km</Text>
-            </View>
-          </View>
-          <View style={styles.radiusOptions}>
-            {radiusOptions.map(option => (
-              <Pressable
-                key={option}
-                style={({ pressed }) => [
-                  styles.radiusChip,
-                  radiusKm === option && styles.radiusChipActive,
-                  pressed && styles.categoryPressed,
-                ]}
-                onPress={() => setRadiusKm(option)}
-              >
-                <Text style={[styles.radiusChipText, radiusKm === option && styles.radiusChipTextActive]}>{option}</Text>
+            {radiusEditing ? (
+              <TextInput
+                value={radiusDraft}
+                onChangeText={setRadiusDraft}
+                onBlur={submitRadiusDraft}
+                onSubmitEditing={submitRadiusDraft}
+                keyboardType="decimal-pad"
+                autoFocus
+                selectTextOnFocus
+                style={styles.radiusInput}
+              />
+            ) : (
+              <Pressable style={styles.radiusBadge} onPress={() => {
+                setRadiusDraft(String(radiusKm));
+                setRadiusEditing(true);
+              }}>
+                <Text style={styles.radiusBadgeText}>{radiusLabel}</Text>
               </Pressable>
-            ))}
+            )}
+          </View>
+          <Pressable
+            style={styles.radiusSlider}
+            onLayout={event => setRadiusTrackWidth(event.nativeEvent.layout.width)}
+            onPress={updateRadiusFromTouch}
+            onPressIn={updateRadiusFromTouch}
+            onMoveShouldSetResponder={() => true}
+            onResponderMove={updateRadiusFromTouch}
+          >
+            <View style={styles.radiusTrack}>
+              <View style={[styles.radiusTrackFill, { width: `${radiusProgress * 100}%` }]} />
+              <View style={[styles.radiusThumb, { left: `${radiusProgress * 100}%` }]} />
+            </View>
+          </Pressable>
+          <View style={styles.radiusScaleRow}>
+            <Text style={styles.radiusScaleText}>100 m</Text>
+            <Text style={styles.radiusScaleText}>25 km</Text>
           </View>
         </View>
 
@@ -5335,32 +5390,60 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "900",
   },
-  radiusOptions: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 15,
-  },
-  radiusChip: {
-    flex: 1,
-    height: 38,
+  radiusInput: {
+    width: 78,
+    height: 40,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#D8DEE8",
-    backgroundColor: "#F8FAFC",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radiusChipActive: {
-    backgroundColor: "#1652B7",
     borderColor: "#1652B7",
-  },
-  radiusChipText: {
-    color: "#64748B",
-    fontSize: 12,
+    backgroundColor: "#FFFFFF",
+    color: "#1652B7",
+    fontSize: 13,
     fontWeight: "900",
+    textAlign: "center",
+    paddingHorizontal: 8,
   },
-  radiusChipTextActive: {
-    color: "#FFFFFF",
+  radiusSlider: {
+    height: 44,
+    justifyContent: "center",
+    marginTop: 18,
+  },
+  radiusTrack: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "#E2E8F0",
+    overflow: "visible",
+  },
+  radiusTrackFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#1652B7",
+  },
+  radiusThumb: {
+    position: "absolute",
+    top: -8,
+    width: 26,
+    height: 26,
+    marginLeft: -13,
+    borderRadius: 13,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 6,
+    borderColor: "#1652B7",
+    shadowColor: "#1652B7",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  radiusScaleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  radiusScaleText: {
+    color: "#94A3B8",
+    fontSize: 11,
+    fontWeight: "800",
   },
   activitySectionHeader: {
     flexDirection: "row",
