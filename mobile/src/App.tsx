@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -29,6 +30,7 @@ type RootStackParamList = {
   HelperTabs: undefined;
   Timeline: undefined;
   RequestDetails: { categoryId: string };
+  Settings: undefined;
   AboutUs: undefined;
   PrivacyPolicy: undefined;
 };
@@ -124,10 +126,29 @@ type LegalSection = {
   accent?: string;
 };
 
+type AppThemeMode = "light" | "dark";
+
+type AppThemeContextValue = {
+  mode: AppThemeMode;
+  isDark: boolean;
+  setMode: (mode: AppThemeMode) => void;
+};
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 const emergeAidLogo = require("../assets/emerge-aid-logo-transparent-cropped.png");
 const emergeAidSplash = require("../assets/emerge-aid-splash-transparent.png");
+const contactEmail = "imailemergeaid@gmail.com";
+
+const AppThemeContext = createContext<AppThemeContextValue>({
+  mode: "light",
+  isDark: false,
+  setMode: () => {},
+});
+
+function useAppTheme() {
+  return useContext(AppThemeContext);
+}
 
 const theme = {
   orange: "#FF6B35",
@@ -548,7 +569,7 @@ const privacySections: LegalSection[] = [
     body: [
       "Emerge Aid is operated by Emerge Aid Technologies Private Limited, registered and operating in Bengaluru, Karnataka, India.",
       "This Privacy Policy applies to citizens, verified responders, and B2B clients using our mobile app and web dashboard.",
-      "Contact for privacy: contact@emergeaid.app.",
+      `Contact for privacy: ${contactEmail}.`,
     ],
   },
   {
@@ -605,7 +626,7 @@ const privacySections: LegalSection[] = [
     title: "Your Rights",
     body: [
       "Under Indian law, you may request access, correction, deletion, withdrawal of consent, grievance redressal, and nomination rights related to your personal data.",
-      "To exercise your rights, contact contact@emergeaid.app. We aim to respond within 30 days.",
+      `To exercise your rights, contact ${contactEmail}. We aim to respond within 30 days.`,
     ],
   },
   {
@@ -622,8 +643,8 @@ function categoryFor(id: string) {
   return categories.find(cat => cat.id === id) ?? categories[0];
 }
 
-function Screen({ children }: { children: React.ReactNode }) {
-  return <SafeAreaView style={styles.safe}>{children}</SafeAreaView>;
+function Screen({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
+  return <SafeAreaView style={[styles.safe, dark && styles.safeDark]}>{children}</SafeAreaView>;
 }
 
 function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void }) {
@@ -649,13 +670,18 @@ function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void 
 }
 
 function ModeScreen({ navigation }: any) {
+  const { isDark } = useAppTheme();
+
   return (
-    <Screen>
-      <StatusBar style="dark" />
-      <View style={styles.homeContent}>
+    <Screen dark={isDark}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <Pressable style={({ pressed }) => [styles.homeSettingsButton, isDark && styles.homeSettingsButtonDark, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("Settings")}>
+        <Ionicons name="settings-outline" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
+      </Pressable>
+      <View style={[styles.homeContent, isDark && styles.homeContentDark]}>
         <Image source={emergeAidLogo} style={styles.homeLogo} />
-        <Text style={styles.homeTitle}>How can Emerge Aid help?</Text>
-        <Text style={styles.homeSubtitle}>Community emergency assistance - available now</Text>
+        <Text style={[styles.homeTitle, isDark && styles.homeTitleDark]}>How can Emerge Aid help?</Text>
+        <Text style={[styles.homeSubtitle, isDark && styles.homeSubtitleDark]}>Community emergency assistance - available now</Text>
         <ModeCard
           title="I Need Help"
           subtitle="Request emergency assistance from nearby helpers"
@@ -670,24 +696,10 @@ function ModeScreen({ navigation }: any) {
           colors={["#1BA3F7", "#1652B7"]}
           onPress={() => navigation.navigate("HelperTabs")}
         />
-        <View style={styles.homeStatsCard}>
+        <View style={[styles.homeStatsCard, isDark && styles.homeStatsCardDark]}>
           <HomeStat icon="people" value="2,841" label="Helpers" />
           <HomeStat icon="checkmark-done-circle" value="14,920" label="Missions" />
           <HomeStat icon="navigate" value="80 km" label="Coverage" />
-        </View>
-        <Text style={styles.homeContact}>
-          For collaboration/business inquiries contact{" "}
-          <Text style={styles.homeContactEmail}>contact@emergeaid.app</Text>
-        </Text>
-        <View style={styles.homeLegalLinks}>
-          <Pressable style={({ pressed }) => [styles.homeLegalButton, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("AboutUs")}>
-            <Ionicons name="information-circle" size={16} color="#1652B7" />
-            <Text style={styles.homeLegalText}>About Us</Text>
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.homeLegalButton, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("PrivacyPolicy")}>
-            <Ionicons name="shield-checkmark" size={16} color="#1652B7" />
-            <Text style={styles.homeLegalText}>Privacy Policy</Text>
-          </Pressable>
         </View>
       </View>
     </Screen>
@@ -724,11 +736,13 @@ function ModeCard({
 }
 
 function HomeStat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string }) {
+  const { isDark } = useAppTheme();
+
   return (
     <View style={styles.homeStat}>
       <Ionicons name={icon} size={17} color={theme.teal} />
-      <Text style={styles.homeStatValue}>{value}</Text>
-      <Text style={styles.homeStatLabel}>{label}</Text>
+      <Text style={[styles.homeStatValue, isDark && styles.homeStatValueDark]}>{value}</Text>
+      <Text style={[styles.homeStatLabel, isDark && styles.homeStatLabelDark]}>{label}</Text>
     </View>
   );
 }
@@ -2254,7 +2268,7 @@ function LegalScreen({
         <View style={styles.legalFooter}>
           <Text style={styles.legalFooterTitle}>Emerge Aid</Text>
           <Text style={styles.legalFooterText}>Help is just a tap away</Text>
-          <Text style={styles.legalFooterEmail}>contact@emergeaid.app</Text>
+          <Text style={styles.legalFooterEmail}>{contactEmail}</Text>
           {updated ? <Text style={styles.legalUpdated}>{updated}</Text> : null}
         </View>
       </ScrollView>
@@ -2285,8 +2299,103 @@ function PrivacyPolicyScreen({ navigation }: any) {
   );
 }
 
+function SettingsScreen({ navigation }: any) {
+  const { isDark, setMode } = useAppTheme();
+
+  return (
+    <Screen dark={isDark}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <ScrollView contentContainerStyle={[styles.settingsScroll, isDark && styles.settingsScrollDark]}>
+        <View style={styles.settingsHeader}>
+          <Pressable style={({ pressed }) => [styles.settingsBackButton, isDark && styles.settingsBackButtonDark, pressed && styles.categoryPressed]} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
+          </Pressable>
+          <View>
+            <Text style={[styles.settingsEyebrow, isDark && styles.settingsEyebrowDark]}>EMERGE AID</Text>
+            <Text style={[styles.settingsTitle, isDark && styles.settingsTitleDark]}>Settings</Text>
+          </View>
+        </View>
+
+        <View style={[styles.settingsCard, isDark && styles.settingsCardDark]}>
+          <View style={styles.settingsRow}>
+            <View style={[styles.settingsIconBox, isDark && styles.settingsIconBoxDark]}>
+              <Ionicons name={isDark ? "moon" : "sunny"} size={20} color={isDark ? "#93C5FD" : "#F97316"} />
+            </View>
+            <View style={styles.settingsRowCopy}>
+              <Text style={[styles.settingsRowTitle, isDark && styles.settingsRowTitleDark]}>{isDark ? "Dark mode" : "Light mode"}</Text>
+              <Text style={[styles.settingsRowSub, isDark && styles.settingsRowSubDark]}>Choose the app appearance for this device.</Text>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={value => setMode(value ? "dark" : "light")}
+              trackColor={{ false: "#CBD5E1", true: "#1D4ED8" }}
+              thumbColor={isDark ? "#FFFFFF" : "#F8FAFC"}
+            />
+          </View>
+        </View>
+
+        <View style={[styles.settingsCard, isDark && styles.settingsCardDark]}>
+          <SettingsLink
+            icon="information-circle"
+            title="About Us"
+            subtitle="Learn what Emerge Aid is building."
+            dark={isDark}
+            onPress={() => navigation.navigate("AboutUs")}
+          />
+          <View style={[styles.settingsDivider, isDark && styles.settingsDividerDark]} />
+          <SettingsLink
+            icon="shield-checkmark"
+            title="Privacy Policy"
+            subtitle="How emergency and account data is handled."
+            dark={isDark}
+            onPress={() => navigation.navigate("PrivacyPolicy")}
+          />
+        </View>
+
+        <View style={[styles.settingsContactCard, isDark && styles.settingsContactCardDark]}>
+          <Ionicons name="mail" size={22} color={isDark ? "#93C5FD" : "#1652B7"} />
+          <Text style={[styles.settingsContactTitle, isDark && styles.settingsContactTitleDark]}>Contact Emerge Aid</Text>
+          <Text style={[styles.settingsContactText, isDark && styles.settingsContactTextDark]}>
+            For business enquiries, suggestions, feedback, partnerships, or app support, contact us at:
+          </Text>
+          <Text style={styles.settingsContactEmail}>{contactEmail}</Text>
+        </View>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+function SettingsLink({
+  icon,
+  title,
+  subtitle,
+  dark,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  dark: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={({ pressed }) => [styles.settingsLink, pressed && styles.categoryPressed]} onPress={onPress}>
+      <View style={[styles.settingsIconBox, dark && styles.settingsIconBoxDark]}>
+        <Ionicons name={icon} size={20} color={dark ? "#93C5FD" : "#1652B7"} />
+      </View>
+      <View style={styles.settingsRowCopy}>
+        <Text style={[styles.settingsRowTitle, dark && styles.settingsRowTitleDark]}>{title}</Text>
+        <Text style={[styles.settingsRowSub, dark && styles.settingsRowSubDark]}>{subtitle}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={dark ? "#64748B" : "#94A3B8"} />
+    </Pressable>
+  );
+}
+
 export default function App() {
   const [showStartup, setShowStartup] = useState(true);
+  const [themeMode, setThemeMode] = useState<AppThemeMode>("light");
+  const isDark = themeMode === "dark";
 
   useEffect(() => {
     const timeout = setTimeout(() => setShowStartup(false), 1400);
@@ -2298,17 +2407,20 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Mode" component={ModeScreen} />
-        <Stack.Screen name="RequesterTabs" component={RequesterTabs} />
-        <Stack.Screen name="HelperTabs" component={HelperTabs} />
-        <Stack.Screen name="Timeline" component={TimelineScreen} />
-        <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} />
-        <Stack.Screen name="AboutUs" component={AboutUsScreen} />
-        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AppThemeContext.Provider value={{ mode: themeMode, isDark, setMode: setThemeMode }}>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Mode" component={ModeScreen} />
+          <Stack.Screen name="RequesterTabs" component={RequesterTabs} />
+          <Stack.Screen name="HelperTabs" component={HelperTabs} />
+          <Stack.Screen name="Timeline" component={TimelineScreen} />
+          <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="AboutUs" component={AboutUsScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </AppThemeContext.Provider>
   );
 }
 
@@ -2400,6 +2512,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FAFCFF",
   },
+  safeDark: {
+    backgroundColor: "#08111F",
+  },
   scroll: {
     paddingBottom: 28,
   },
@@ -2475,6 +2590,32 @@ const styles = StyleSheet.create({
     paddingBottom: 22,
     alignItems: "center",
   },
+  homeContentDark: {
+    backgroundColor: "#08111F",
+  },
+  homeSettingsButton: {
+    position: "absolute",
+    top: 18,
+    right: 18,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#14213D",
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  homeSettingsButtonDark: {
+    backgroundColor: "#111C2E",
+    borderColor: "rgba(147, 197, 253, 0.16)",
+  },
   homeLogo: {
     width: 172,
     height: 172,
@@ -2488,12 +2629,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 9,
   },
+  homeTitleDark: {
+    color: "#F8FAFC",
+  },
   homeSubtitle: {
     color: "#7A8798",
     fontSize: 13,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 30,
+  },
+  homeSubtitleDark: {
+    color: "#94A3B8",
   },
   modeCardPress: {
     width: "100%",
@@ -2554,6 +2701,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 5,
   },
+  homeStatsCardDark: {
+    backgroundColor: "#111C2E",
+    borderColor: "rgba(147, 197, 253, 0.14)",
+  },
   homeStat: {
     flex: 1,
     alignItems: "center",
@@ -2564,11 +2715,17 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 5,
   },
+  homeStatValueDark: {
+    color: "#F8FAFC",
+  },
   homeStatLabel: {
     color: "#718096",
     fontSize: 10,
     fontWeight: "500",
     marginTop: 3,
+  },
+  homeStatLabelDark: {
+    color: "#94A3B8",
   },
   homeContact: {
     marginTop: "auto",
@@ -2578,6 +2735,9 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     textAlign: "center",
     paddingHorizontal: 8,
+  },
+  homeContactDark: {
+    color: "#94A3B8",
   },
   homeContactEmail: {
     color: "#1652B7",
@@ -2603,6 +2763,164 @@ const styles = StyleSheet.create({
     color: "#1652B7",
     fontSize: 12,
     fontWeight: "800",
+  },
+  settingsScroll: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+    backgroundColor: "#F8FAFF",
+  },
+  settingsScrollDark: {
+    backgroundColor: "#08111F",
+  },
+  settingsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 20,
+  },
+  settingsBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsBackButtonDark: {
+    backgroundColor: "#111C2E",
+    borderColor: "rgba(147, 197, 253, 0.14)",
+  },
+  settingsEyebrow: {
+    color: "#1652B7",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  settingsEyebrowDark: {
+    color: "#93C5FD",
+  },
+  settingsTitle: {
+    color: "#172033",
+    fontSize: 30,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  settingsTitleDark: {
+    color: "#F8FAFC",
+  },
+  settingsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    marginBottom: 14,
+    overflow: "hidden",
+    shadowColor: "#14213D",
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
+  },
+  settingsCardDark: {
+    backgroundColor: "#111C2E",
+    borderColor: "rgba(147, 197, 253, 0.14)",
+    shadowOpacity: 0,
+  },
+  settingsRow: {
+    minHeight: 82,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  settingsLink: {
+    minHeight: 78,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  settingsIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: "#EAF2FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsIconBoxDark: {
+    backgroundColor: "rgba(37, 99, 235, 0.18)",
+  },
+  settingsRowCopy: {
+    flex: 1,
+  },
+  settingsRowTitle: {
+    color: "#172033",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  settingsRowTitleDark: {
+    color: "#F8FAFC",
+  },
+  settingsRowSub: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  settingsRowSubDark: {
+    color: "#94A3B8",
+  },
+  settingsDivider: {
+    height: 1,
+    backgroundColor: "rgba(22, 82, 183, 0.08)",
+    marginLeft: 70,
+  },
+  settingsDividerDark: {
+    backgroundColor: "rgba(147, 197, 253, 0.12)",
+  },
+  settingsContactCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "rgba(22, 82, 183, 0.08)",
+    padding: 18,
+  },
+  settingsContactCardDark: {
+    backgroundColor: "#111C2E",
+    borderColor: "rgba(147, 197, 253, 0.14)",
+  },
+  settingsContactTitle: {
+    color: "#172033",
+    fontSize: 17,
+    fontWeight: "900",
+    marginTop: 10,
+  },
+  settingsContactTitleDark: {
+    color: "#F8FAFC",
+  },
+  settingsContactText: {
+    color: "#64748B",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  settingsContactTextDark: {
+    color: "#94A3B8",
+  },
+  settingsContactEmail: {
+    color: "#1652B7",
+    fontSize: 15,
+    fontWeight: "900",
+    marginTop: 12,
   },
   legalScroll: {
     paddingBottom: 28,
