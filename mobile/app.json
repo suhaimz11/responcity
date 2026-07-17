@@ -37,6 +37,10 @@
         "RECORD_AUDIO"
       ]
     },
-    "extra": {}
+    "extra": {
+      "eas": {
+        "projectId": "ff0327e0-7604-4c20-85a1-14121fd7cc19"
+      }
+    }
   }
 }
