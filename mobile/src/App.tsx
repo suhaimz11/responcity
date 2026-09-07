@@ -5,10 +5,11 @@ import {
   FlatList,
   GestureResponderEvent,
   Image,
+  KeyboardAvoidingView,
   LayoutChangeEvent,
   Modal,
   Pressable,
-  SafeAreaView,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -16,7 +17,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, NavigationContainer } from "@react-navigation/native";
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
@@ -832,7 +835,14 @@ function categoryFor(id: string) {
 function Screen({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
   const { isDark } = useAppTheme();
   const useDark = dark ?? isDark;
-  return <SafeAreaView style={[styles.safe, useDark && styles.safeDark]}>{children}</SafeAreaView>;
+  const tabBarHeight = useContext(BottomTabBarHeightContext);
+  return (
+    <SafeAreaView edges={tabBarHeight == null ? ["top", "right", "bottom", "left"] : ["top", "right", "left"]} style={[styles.safe, useDark && styles.safeDark]}>
+      <KeyboardAvoidingView style={styles.screenBody} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        {children}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 }
 
 function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void }) {
@@ -864,10 +874,13 @@ function ModeScreen({ navigation }: any) {
   return (
     <Screen dark={isDark}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <Pressable style={({ pressed }) => [styles.homeSettingsButton, isDark && styles.homeSettingsButtonDark, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("Settings")}>
+      <View style={styles.homeToolbar}>
+      <Text style={[styles.homeEyebrow, isDark && styles.mutedOnDark]}>YOUR COMMUNITY, CONNECTED</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Open settings" style={({ pressed }) => [styles.homeSettingsButton, isDark && styles.homeSettingsButtonDark, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("Settings")}>
         <Ionicons name="settings-outline" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
       </Pressable>
-      <View style={[styles.homeContent, isDark && styles.homeContentDark]}>
+      </View>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.homeContent, isDark && styles.homeContentDark]}>
         <View style={[styles.homeLogoPlate, isDark && styles.homeLogoPlateDark]}>
           <Image source={emergeAidLogo} style={styles.homeLogo} />
         </View>
@@ -901,7 +914,7 @@ function ModeScreen({ navigation }: any) {
           <HomeStat icon="checkmark-done-circle" value="14,920" label="Missions" />
           <HomeStat icon="navigate" value="80 km" label="Coverage" />
         </View>
-      </View>
+      </ScrollView>
     </Screen>
   );
 }
@@ -920,7 +933,7 @@ function ModeCard({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.modeCardPress, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.modeCardPress, pressed && styles.pressed]}>
       <LinearGradient colors={colors} style={styles.modeCard}>
         <View style={styles.modeIcon}>
           <Ionicons name={icon} size={34} color="#fff" />
@@ -949,6 +962,7 @@ function HomeStat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap
 
 function RequesterTabs({ navigation, route }: any) {
   const { isDark } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [session, setSession] = useState<EmergencySession>(defaultEmergencySession);
   const lastUnlockToken = useRef<number | null>(null);
 
@@ -972,7 +986,7 @@ function RequesterTabs({ navigation, route }: any) {
   }, [navigation, route.params?.unlockCheckInToken]);
 
   return (
-    <Tab.Navigator screenOptions={tabOptions(isDark)}>
+    <Tab.Navigator screenOptions={tabOptions(isDark, insets.bottom)}>
       <Tab.Screen
         name="Home"
         options={{ tabBarIcon: tabIcon("home") }}
@@ -992,15 +1006,16 @@ function RequesterTabs({ navigation, route }: any) {
 
 function HelperTabs({ navigation }: any) {
   const { isDark } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <Tab.Navigator screenOptions={tabOptions(isDark)}>
+    <Tab.Navigator screenOptions={tabOptions(isDark, insets.bottom)}>
       <Tab.Screen
         name="Requests"
-        component={HelperHome}
-        initialParams={{ rootNavigation: navigation }}
         options={{ tabBarIcon: tabIcon("radio") }}
-      />
+      >
+        {props => <HelperHome {...props} rootNavigation={navigation} />}
+      </Tab.Screen>
       <Tab.Screen name="Community" component={ResponderMap} options={{ tabBarIcon: tabIcon("people") }} />
       <Tab.Screen name="Rankings" component={ResponderStats} options={{ tabBarIcon: tabIcon("trophy") }} />
     </Tab.Navigator>
@@ -1011,27 +1026,27 @@ function tabIcon(name: keyof typeof Ionicons.glyphMap) {
   return ({ color, size }: { color: string; size: number }) => <Ionicons name={name} color={color} size={size} />;
 }
 
-function tabOptions(isDark: boolean) {
+function tabOptions(isDark: boolean, bottomInset: number) {
   return {
   headerShown: false,
-  tabBarActiveTintColor: theme.red,
+  tabBarActiveTintColor: isDark ? "#93C5FD" : "#1652B7",
   tabBarInactiveTintColor: isDark ? "#94A3B8" : "#6B7280",
   tabBarStyle: {
-    height: 70,
-    paddingBottom: 12,
+    height: 60 + Math.max(bottomInset, 8),
+    paddingBottom: Math.max(bottomInset, 8),
     paddingTop: 8,
     backgroundColor: isDark ? "#101C2F" : "rgba(255,255,255,0.94)",
     borderTopColor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(22, 82, 183, 0.08)",
     borderTopWidth: 1,
     shadowColor: "#14213D",
-    shadowOpacity: isDark ? 0 : 0.08,
+    shadowOpacity: isDark ? 0 : 0.03,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: -5 },
-    elevation: 12,
+    elevation: 3,
   },
   tabBarLabelStyle: {
     fontSize: 11,
-    fontWeight: "800" as const,
+    fontWeight: "600" as const,
   },
   };
 }
@@ -1040,11 +1055,22 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
   const { isDark } = useAppTheme();
   const [locationStatus, setLocationStatus] = useState("Location not shared yet");
   const [sosLaunching, setSosLaunching] = useState(false);
+  const sosInFlight = useRef(false);
+  const sosTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mounted = useRef(true);
   const [nearbyRadiusKm, setNearbyRadiusKm] = useState(5);
   const rootNavigation = providedRootNavigation ?? route.params?.rootNavigation ?? navigation;
   const radarPulse = useRef(new Animated.Value(0)).current;
   const launchPulse = useRef(new Animated.Value(0)).current;
   const launchIconScale = useRef(new Animated.Value(0.72)).current;
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (sosTimer.current) clearTimeout(sosTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -1109,20 +1135,35 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
 
   async function requestLocation() {
     const { status } = await Location.requestForegroundPermissionsAsync();
+    if (!mounted.current) return;
     if (status !== "granted") {
       setLocationStatus("Location permission denied");
       return;
     }
     const position = await Location.getCurrentPositionAsync({});
+    if (!mounted.current) return;
     setLocationStatus(`Shared: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
   }
 
   async function sendSos() {
-    if (sosLaunching) return;
+    if (sosInFlight.current) return;
+    sosInFlight.current = true;
     setSosLaunching(true);
-    await requestLocation();
+    setLocationStatus("Getting your location…");
+    try {
+      await requestLocation();
+    } catch {
+      if (mounted.current) {
+        setLocationStatus("Location unavailable. Please try again.");
+        setSosLaunching(false);
+      }
+      sosInFlight.current = false;
+      return;
+    }
+    if (!mounted.current) return;
     onEmergencyRequest?.();
-    setTimeout(() => {
+    sosTimer.current = setTimeout(() => {
+      sosInFlight.current = false;
       setSosLaunching(false);
       navigation.navigate("Check In");
     }, 1850);
@@ -1140,7 +1181,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <RequesterHeader onSwitch={() => rootNavigation.navigate("Mode")} />
         <View style={styles.sosWrap}>
         <Text style={[styles.sosPrompt, isDark && styles.textOnDark]}>Press the button for immediate help</Text>
@@ -1173,7 +1214,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
                 <Animated.View pointerEvents="none" style={[styles.sosButtonLaunchRing, styles.sosButtonLaunchRingSmall, { opacity: launchPulseOpacity, transform: [{ scale: launchPulseScale }] }]} />
               </>
             ) : null}
-            <Pressable style={({ pressed }) => [styles.sosButton, pressed && styles.pressed]} onPress={sendSos}>
+            <Pressable accessibilityRole="button" accessibilityLabel={sosLaunching ? "Sending SOS" : "Send SOS"} accessibilityState={{ disabled: sosLaunching, busy: sosLaunching }} disabled={sosLaunching} style={({ pressed }) => [styles.sosButton, pressed && styles.pressed]} onPress={sendSos}>
               <LinearGradient colors={[theme.orange, theme.red]} style={styles.sosGradient}>
                 {sosLaunching ? (
                   <Animated.View style={{ alignItems: "center", transform: [{ scale: launchIconScale }] }}>
@@ -1373,7 +1414,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
           <Text style={styles.sosLaunchSub}>Notifying your selected buddies and preparing Safe Check-In.</Text>
         </View>
       ) : null}
-      <ScrollView contentContainerStyle={styles.detailScroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.detailScroll}>
         <RequesterHeader onSwitch={() => navigation.navigate("Mode")} />
         <View style={[styles.detailSheet, isDark && styles.detailSheetDark]}>
           <View style={styles.sheetHandle} />
@@ -1588,7 +1629,7 @@ function TimelineScreen({ navigation }: any) {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <LinearGradient colors={[theme.red, "#C62828"]} style={styles.timelineHero}>
           <Ionicons name="pulse" color="#fff" size={56} />
           <Text style={styles.timelineTitle}>Help is on the way</Text>
@@ -1753,7 +1794,7 @@ function SafeCheckIn({
   if (session.status === "review") {
     return (
       <Screen>
-        <ScrollView contentContainerStyle={styles.checkReview}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.checkReview}>
           <View style={styles.checkIconSuccess}>
             <Ionicons name="shield-checkmark" size={34} color={theme.green} />
           </View>
@@ -1835,7 +1876,7 @@ function SafeCheckIn({
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.checkIntro}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.checkIntro}>
         <View style={styles.checkIconSoft}>
           <Ionicons name="shield-checkmark" size={38} color="#1652B7" />
         </View>
@@ -1908,7 +1949,7 @@ function detailPlaceholderFor(categoryId: string) {
 function EmergencyContacts() {
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <BrandHeader mode="Emergency contacts" />
         <InfoCard title="Primary contact" lines={["Ayaan S.", "+91 90000 00000", "Receives SMS and location during SOS"]} />
         <InfoCard title="Official escalation" lines={["India emergency: 112", "Ambulance: 108", "Auto-escalates if no responder accepts"]} />
@@ -1957,7 +1998,7 @@ function MissionHistoryScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.activityScroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.activityScroll}>
         <Text style={[styles.activityTitle, isDark && styles.textOnDark]}>Activity</Text>
 
         <View style={[styles.activityStatsCard, isDark && styles.surfaceDark]}>
@@ -2063,9 +2104,9 @@ function MissionHistoryCard({ mission }: { mission: MissionHistoryItem }) {
   );
 }
 
-function HelperHome({ navigation, route }: any) {
+function HelperHome({ navigation, rootNavigation: providedRootNavigation }: any) {
   const { isDark } = useAppTheme();
-  const rootNavigation = route.params?.rootNavigation ?? navigation;
+  const rootNavigation = providedRootNavigation ?? navigation;
   const { approvedRequests } = useRequestReview();
   const [activeChatRequest, setActiveChatRequest] = useState<Request | null>(null);
   const [helperTab, setHelperTab] = useState<"open" | "emergency">("open");
@@ -2339,7 +2380,7 @@ function ResponderMap() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.communityScroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.communityScroll}>
         <Text style={[styles.communityTitle, isDark && styles.textOnDark]}>Community</Text>
 
         <View style={[styles.communitySlider, isDark && styles.segmentDark]}>
@@ -2495,7 +2536,7 @@ function ResponderStats() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.rankingScroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.rankingScroll}>
         <LinearGradient colors={["#0B67D1", "#0857B6"]} style={styles.rankingHero}>
           <Text style={styles.rankingEyebrow}>HELPER RANK</Text>
           <View style={styles.rankingTierRow}>
@@ -2649,7 +2690,7 @@ function LegalScreen({
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={[styles.legalScroll, isDark && styles.darkScreen]}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.legalScroll, isDark && styles.darkScreen]}>
         <LinearGradient colors={["#EFF6FF", "#ECFEFF"]} style={styles.legalHero}>
           <Pressable style={styles.legalBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#1B2A6B" />
@@ -2739,7 +2780,7 @@ function LoginScreen({ navigation }: any) {
   return (
     <Screen>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <ScrollView contentContainerStyle={[styles.authScroll, isDark && styles.authScrollDark]}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.authScroll, isDark && styles.authScrollDark]}>
         <View style={styles.authBrandBlock}>
           <View style={[styles.authLogoPlate, isDark && styles.authLogoPlateDark]}>
             <Image source={emergeAidLogo} style={styles.authLogo} />
@@ -3030,7 +3071,7 @@ function SettingsScreen({ navigation }: any) {
   return (
     <Screen dark={isDark}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <ScrollView contentContainerStyle={[styles.settingsScroll, isDark && styles.settingsScrollDark]}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.settingsScroll, isDark && styles.settingsScrollDark]}>
         <View style={styles.settingsHeader}>
           <Pressable style={({ pressed }) => [styles.settingsBackButton, isDark && styles.settingsBackButtonDark, pressed && styles.categoryPressed]} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
@@ -3123,6 +3164,10 @@ function SettingsLink({
 }
 
 export default function App() {
+  return <SafeAreaProvider><AppContent /></SafeAreaProvider>;
+}
+
+function AppContent() {
   const [showStartup, setShowStartup] = useState(true);
   const [themeMode, setThemeMode] = useState<AppThemeMode>("light");
   const [user, setUser] = useState<DemoUser | null>(null);
@@ -3203,8 +3248,9 @@ export default function App() {
     <AppThemeContext.Provider value={{ mode: themeMode, isDark, setMode: setThemeMode }}>
       <AuthContext.Provider value={{ user, login, signup, logout }}>
         <RequestReviewContext.Provider value={{ pendingRequests, approvedRequests, submitForReview, approveRequest, rejectRequest }}>
-          <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
+          <View style={[styles.appShell, isDark && styles.safeDark]}>
+          <NavigationContainer theme={isDark ? DarkTheme : DefaultTheme}>
+            <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: isDark ? "#07111F" : "#F5F7FB" } }} initialRouteName="Login">
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Mode" component={ModeScreen} />
               <Stack.Screen name="RequesterTabs" component={RequesterTabs} />
@@ -3217,6 +3263,7 @@ export default function App() {
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             </Stack.Navigator>
           </NavigationContainer>
+          </View>
         </RequestReviewContext.Provider>
       </AuthContext.Provider>
     </AppThemeContext.Provider>
@@ -3228,7 +3275,7 @@ function StartupScreen() {
   const pulseAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    const animation = Animated.parallel([
       Animated.spring(logoAnim, {
         toValue: 1,
         friction: 7,
@@ -3249,7 +3296,9 @@ function StartupScreen() {
           }),
         ]),
       ),
-    ]).start();
+    ]);
+    animation.start();
+    return () => animation.stop();
   }, [logoAnim, pulseAnim]);
 
   const logoScale = logoAnim.interpolate({
@@ -3280,6 +3329,32 @@ function StartupScreen() {
 }
 
 const styles = StyleSheet.create({
+  appShell: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 600,
+    alignSelf: "center",
+    backgroundColor: "#F5F7FB",
+  },
+  screenBody: {
+    flex: 1,
+    minHeight: 0,
+  },
+  homeToolbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  homeEyebrow: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    color: "#64748B",
+    flexShrink: 1,
+  },
   startupScreen: {
     flex: 1,
     backgroundColor: "#FAFCFF",
@@ -3309,7 +3384,7 @@ const styles = StyleSheet.create({
   },
   safe: {
     flex: 1,
-    backgroundColor: "#FAFCFF",
+    backgroundColor: "#F5F7FB",
   },
   safeDark: {
     backgroundColor: "#07111F",
@@ -3416,29 +3491,25 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   homeContent: {
-    flex: 1,
-    paddingHorizontal: 22,
-    paddingTop: 72,
-    paddingBottom: 22,
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 32,
     alignItems: "center",
   },
   homeContentDark: {
     backgroundColor: "#07111F",
   },
   homeSettingsButton: {
-    position: "absolute",
-    top: 54,
-    right: 18,
-    zIndex: 10,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "transparent",
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   homeSettingsButtonDark: {
-    backgroundColor: "transparent",
+    backgroundColor: "#101C2F",
   },
   homeLogoPlate: {
     width: 138,
@@ -3465,20 +3536,23 @@ const styles = StyleSheet.create({
   },
   homeTitle: {
     color: "#192238",
-    fontSize: 23,
+    fontSize: 26,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 9,
+    letterSpacing: -0.7,
+    lineHeight: 32,
   },
   homeTitleDark: {
     color: "#F8FAFC",
   },
   homeSubtitle: {
-    color: "#7A8798",
-    fontSize: 13,
-    fontWeight: "600",
+    color: "#64748B",
+    fontSize: 14,
+    fontWeight: "400",
     textAlign: "center",
     marginBottom: 30,
+    lineHeight: 21,
   },
   homeSubtitleDark: {
     color: "#94A3B8",
@@ -3488,24 +3562,24 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     marginBottom: 15,
     shadowColor: "#14213D",
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 7,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   modeCard: {
     minHeight: 108,
-    borderRadius: 22,
-    paddingHorizontal: 19,
+    borderRadius: 20,
+    paddingHorizontal: 18,
     paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 12,
   },
   modeIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
@@ -3515,8 +3589,8 @@ const styles = StyleSheet.create({
   },
   modeCardTitle: {
     color: "#fff",
-    fontSize: 20,
-    fontWeight: "800",
+    fontSize: 19,
+    fontWeight: "700",
   },
   modeCardSub: {
     color: "rgba(255,255,255,0.9)",
@@ -3530,17 +3604,18 @@ const styles = StyleSheet.create({
     minHeight: 94,
     marginTop: 12,
     backgroundColor: "#FFFFFF",
-    borderRadius: 22,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(22, 82, 183, 0.08)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
     shadowColor: "#14213D",
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 5,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    paddingVertical: 18,
   },
   homeStatsCardDark: {
     backgroundColor: "#101C2F",
@@ -3562,7 +3637,7 @@ const styles = StyleSheet.create({
   },
   homeStatLabel: {
     color: "#718096",
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "500",
     marginTop: 3,
   },
@@ -3608,11 +3683,11 @@ const styles = StyleSheet.create({
   },
   authScroll: {
     flexGrow: 1,
-    paddingHorizontal: 22,
-    paddingTop: 72,
+    paddingHorizontal: 24,
+    paddingTop: 40,
     paddingBottom: 28,
     alignItems: "center",
-    backgroundColor: "#FAFCFF",
+    backgroundColor: "#F5F7FB",
   },
   authScrollDark: {
     backgroundColor: "#07111F",
@@ -3640,37 +3715,40 @@ const styles = StyleSheet.create({
   },
   authTitle: {
     color: "#172033",
-    fontSize: 28,
-    fontWeight: "900",
+    fontSize: 26,
+    fontWeight: "700",
     textAlign: "center",
+    letterSpacing: -0.7,
   },
   authTitleDark: {
     color: "#F8FAFC",
   },
   authSub: {
     color: "#64748B",
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 20,
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 22,
     textAlign: "center",
     marginTop: 8,
     marginBottom: 28,
+    maxWidth: 360,
   },
   authSubDark: {
     color: "#94A3B8",
   },
   authCard: {
     width: "100%",
-    borderRadius: 22,
+    borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "rgba(22, 82, 183, 0.08)",
-    padding: 14,
+    padding: 20,
     shadowColor: "#14213D",
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    maxWidth: 440,
   },
   authCardDark: {
     backgroundColor: "#0D1828",
@@ -3707,15 +3785,16 @@ const styles = StyleSheet.create({
   },
   authInput: {
     minHeight: 52,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#D8DEE8",
     backgroundColor: "#F8FAFC",
     paddingHorizontal: 14,
     color: "#1F2937",
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "400",
     marginBottom: 10,
+    paddingVertical: 14,
   },
   authInputDark: {
     backgroundColor: "#081321",
@@ -3724,7 +3803,7 @@ const styles = StyleSheet.create({
   },
   authSubmitButton: {
     height: 54,
-    borderRadius: 17,
+    borderRadius: 12,
     backgroundColor: "#1652B7",
     alignItems: "center",
     justifyContent: "center",
@@ -3733,7 +3812,7 @@ const styles = StyleSheet.create({
   authSubmitText: {
     color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   authDemoBox: {
     marginTop: 14,
@@ -4490,8 +4569,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   pressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.88,
+    transform: [{ scale: 1 }],
   },
   sosWrap: {
     alignItems: "center",
@@ -4586,6 +4665,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     marginTop: 12,
+    minHeight: 36,
+    lineHeight: 18,
   },
   sosLaunchOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -4640,18 +4721,18 @@ const styles = StyleSheet.create({
   },
   requesterHeader: {
     marginHorizontal: 0,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 22,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
   requesterHeaderLogo: {
-    width: 46,
-    height: 46,
+    width: 40,
+    height: 40,
     borderRadius: 14,
     backgroundColor: "#fff",
     alignItems: "center",
@@ -4668,32 +4749,33 @@ const styles = StyleSheet.create({
   },
   requesterEyebrow: {
     color: "rgba(255,255,255,0.72)",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 1.2,
+    letterSpacing: 0.4,
   },
   requesterTitle: {
     color: "#fff",
-    fontSize: 20,
-    fontWeight: "900",
+    fontSize: 18,
+    fontWeight: "700",
     marginTop: 2,
   },
   headerIconButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.14)",
   },
   headerSwitchButton: {
-    height: 42,
+    height: undefined,
     borderRadius: 16,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
     backgroundColor: "rgba(255,255,255,0.18)",
+    minHeight: 44,
   },
   headerSwitchText: {
     color: "#fff",
@@ -4710,7 +4792,7 @@ const styles = StyleSheet.create({
   requestSectionTitle: {
     color: "#2D3748",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   termsPill: {
     backgroundColor: "#EAF2F8",
@@ -4735,7 +4817,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: theme.text,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
     marginHorizontal: 20,
     marginTop: 18,
     marginBottom: 12,
@@ -4748,8 +4830,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   categoryCard: {
-    width: "31%",
-    minHeight: 92,
+    width: "30%",
+    minHeight: 96,
     borderWidth: 1,
     borderRadius: 16,
     alignItems: "center",
@@ -4757,24 +4839,28 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingHorizontal: 6,
     shadowColor: "#14213D",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    flexGrow: 1,
+    flexBasis: "30%",
+    paddingVertical: 12,
   },
   categoryText: {
-    fontSize: 10,
-    fontWeight: "900",
+    fontSize: 12,
+    fontWeight: "600",
     textAlign: "center",
+    lineHeight: 17,
   },
   categoryPressed: {
-    opacity: 0.78,
-    transform: [{ scale: 0.96 }],
+    opacity: 0.8,
+    transform: [{ scale: 1 }],
   },
   buddiesTitle: {
     color: "#2D3748",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
     marginHorizontal: 20,
     marginTop: 18,
     marginBottom: 8,
@@ -6402,10 +6488,10 @@ const styles = StyleSheet.create({
     borderColor: theme.border,
     borderLeftWidth: 4,
     shadowColor: "#14213D",
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   urgentCard: {
     borderColor: "rgba(255,23,68,0.35)",
@@ -6440,7 +6526,7 @@ const styles = StyleSheet.create({
   requestUserName: {
     color: "#2D3748",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   urgentPill: {
     borderRadius: 9,
@@ -6544,7 +6630,7 @@ const styles = StyleSheet.create({
   communitySliderText: {
     color: "#64748B",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   communitySliderTextActive: {
     color: "#2D3748",
