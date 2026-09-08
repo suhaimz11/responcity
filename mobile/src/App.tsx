@@ -27,9 +27,13 @@ import { StatusBar } from "expo-status-bar";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
+import { AuthProvider, useAuth } from "./auth/AuthProvider";
+import { AuthScreen } from "./auth/AuthScreen";
+import { authErrorMessage } from "./auth/policy";
 
 type RootStackParamList = {
   Login: undefined;
+  VerifyEmail: undefined;
   Mode: undefined;
   RequesterTabs: undefined;
   HelperTabs: undefined;
@@ -59,14 +63,6 @@ type Request = {
   urgent: boolean;
   buddy?: boolean;
   timeAgo?: string;
-};
-
-type DemoUserRole = "user" | "admin";
-
-type DemoUser = {
-  name: string;
-  email: string;
-  role: DemoUserRole;
 };
 
 type PendingHelpRequest = Request & {
@@ -176,13 +172,6 @@ type AppThemeContextValue = {
   setMode: (mode: AppThemeMode) => void;
 };
 
-type AuthContextValue = {
-  user: DemoUser | null;
-  login: (identifier: string, password: string) => DemoUser;
-  signup: (name: string, email: string, password: string) => DemoUser;
-  logout: () => void;
-};
-
 type RequestReviewContextValue = {
   pendingRequests: PendingHelpRequest[];
   approvedRequests: Request[];
@@ -196,21 +185,11 @@ const Tab = createBottomTabNavigator();
 const emergeAidLogo = require("../assets/emerge-aid-logo-transparent-balanced.png");
 const emergeAidSplash = require("../assets/emerge-aid-splash-transparent.png");
 const contactEmail = "imailemergeaid@gmail.com";
-const hardcodedAdmins = [
-  { name: "Suhaim", email: "suhaim@emergeaid.demo", username: "suhaim", password: "Hajeeb" },
-  { name: "Abdulla", email: "abdulla@emergeaid.demo", username: "abdulla", password: "Hajeeb" },
-];
 
 const AppThemeContext = createContext<AppThemeContextValue>({
   mode: "light",
   isDark: false,
   setMode: () => {},
-});
-const AuthContext = createContext<AuthContextValue>({
-  user: null,
-  login: () => ({ name: "Demo User", email: "demo@emergeaid.app", role: "user" }),
-  signup: () => ({ name: "Demo User", email: "demo@emergeaid.app", role: "user" }),
-  logout: () => {},
 });
 const RequestReviewContext = createContext<RequestReviewContextValue>({
   pendingRequests: [],
@@ -222,10 +201,6 @@ const RequestReviewContext = createContext<RequestReviewContextValue>({
 
 function useAppTheme() {
   return useContext(AppThemeContext);
-}
-
-function useAuth() {
-  return useContext(AuthContext);
 }
 
 function useRequestReview() {
@@ -2748,92 +2723,9 @@ function PrivacyPolicyScreen({ navigation }: any) {
   );
 }
 
-function LoginScreen({ navigation }: any) {
-  const { login, signup } = useAuth();
+function LoginScreen() {
   const { isDark } = useAppTheme();
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [name, setName] = useState("");
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-
-  function continueWith(user: DemoUser) {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Mode" }],
-    });
-  }
-
-  function submitAuth() {
-    const cleanIdentifier = identifier.trim();
-    const cleanName = name.trim();
-    if (!cleanIdentifier || !password.trim() || (mode === "signup" && !cleanName)) {
-      Alert.alert("Missing details", mode === "signup" ? "Enter your name, email, and password." : "Enter username/email and password.");
-      return;
-    }
-
-    const user = mode === "signup"
-      ? signup(cleanName, cleanIdentifier, password)
-      : login(cleanIdentifier, password);
-    continueWith(user);
-  }
-
-  return (
-    <Screen>
-      <StatusBar style={isDark ? "light" : "dark"} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.authScroll, isDark && styles.authScrollDark]}>
-        <View style={styles.authBrandBlock}>
-          <View style={[styles.authLogoPlate, isDark && styles.authLogoPlateDark]}>
-            <Image source={emergeAidLogo} style={styles.authLogo} />
-          </View>
-        </View>
-        <Text style={[styles.authTitle, isDark && styles.authTitleDark]}>Welcome to Emerge Aid</Text>
-        <Text style={[styles.authSub, isDark && styles.authSubDark]}>Sign in to request help, respond nearby, or review emergency posts.</Text>
-
-        <View style={[styles.authCard, isDark && styles.authCardDark]}>
-          <View style={[styles.authModeSwitch, isDark && styles.authModeSwitchDark]}>
-            <Pressable style={[styles.authModeButton, mode === "login" && styles.authModeButtonActive]} onPress={() => setMode("login")}>
-              <Text style={[styles.authModeText, mode === "login" && styles.authModeTextActive]}>Login</Text>
-            </Pressable>
-            <Pressable style={[styles.authModeButton, mode === "signup" && styles.authModeButtonActive]} onPress={() => setMode("signup")}>
-              <Text style={[styles.authModeText, mode === "signup" && styles.authModeTextActive]}>Sign Up</Text>
-            </Pressable>
-          </View>
-
-          {mode === "signup" ? (
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Full name"
-              placeholderTextColor="#8B95A1"
-              style={[styles.authInput, isDark && styles.authInputDark]}
-            />
-          ) : null}
-          <TextInput
-            value={identifier}
-            onChangeText={setIdentifier}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="Username or email"
-            placeholderTextColor="#8B95A1"
-            style={[styles.authInput, isDark && styles.authInputDark]}
-          />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Password"
-            placeholderTextColor="#8B95A1"
-            style={[styles.authInput, isDark && styles.authInputDark]}
-          />
-
-          <Pressable style={styles.authSubmitButton} onPress={submitAuth}>
-            <Text style={styles.authSubmitText}>{mode === "signup" ? "Create Demo Account" : "Login"}</Text>
-          </Pressable>
-
-        </View>
-      </ScrollView>
-    </Screen>
-  );
+  return <Screen><StatusBar style={isDark ? "light" : "dark"} /><AuthScreen dark={isDark} /></Screen>;
 }
 
 function AdminDashboardScreen({ navigation }: any) {
@@ -3062,10 +2954,21 @@ function AdminCheck({ label, passed }: { label: string; passed: boolean }) {
 function SettingsScreen({ navigation }: any) {
   const { isDark, setMode } = useAppTheme();
   const { logout } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const logoutInFlight = useRef(false);
 
-  function signOut() {
-    logout();
-    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  async function signOut() {
+    if (logoutInFlight.current) return;
+    logoutInFlight.current = true;
+    setSigningOut(true);
+    setLogoutError("");
+    try { await logout(); }
+    catch (error) {
+      setLogoutError(authErrorMessage(error));
+      setSigningOut(false);
+      logoutInFlight.current = false;
+    }
   }
 
   return (
@@ -3127,10 +3030,11 @@ function SettingsScreen({ navigation }: any) {
           <Text style={[styles.settingsContactEmail, isDark && styles.settingsContactEmailDark]}>{contactEmail}</Text>
         </View>
 
-        <Pressable style={({ pressed }) => [styles.settingsLogoutButton, isDark && styles.settingsLogoutButtonDark, pressed && styles.categoryPressed]} onPress={signOut}>
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: signingOut, busy: signingOut }} disabled={signingOut} style={({ pressed }) => [styles.settingsLogoutButton, isDark && styles.settingsLogoutButtonDark, pressed && styles.categoryPressed]} onPress={signOut}>
           <Ionicons name="log-out-outline" size={18} color="#E11D48" />
-          <Text style={styles.settingsLogoutText}>Log out</Text>
+          <Text style={styles.settingsLogoutText}>{signingOut ? "Signing out…" : "Log out"}</Text>
         </Pressable>
+        {logoutError ? <Text accessibilityRole="alert" style={{ color: isDark ? "#FDA4AF" : "#BE123C", marginTop: 12 }}>{logoutError}</Text> : null}
       </ScrollView>
     </Screen>
   );
@@ -3164,13 +3068,13 @@ function SettingsLink({
 }
 
 export default function App() {
-  return <SafeAreaProvider><AppContent /></SafeAreaProvider>;
+  return <SafeAreaProvider><AuthProvider><AppContent /></AuthProvider></SafeAreaProvider>;
 }
 
 function AppContent() {
   const [showStartup, setShowStartup] = useState(true);
   const [themeMode, setThemeMode] = useState<AppThemeMode>("light");
-  const [user, setUser] = useState<DemoUser | null>(null);
+  const { user, loading: authLoading } = useAuth();
   const [pendingRequests, setPendingRequests] = useState<PendingHelpRequest[]>(demoPendingRequests);
   const [approvedRequests, setApprovedRequests] = useState<Request[]>([]);
   const isDark = themeMode === "dark";
@@ -3180,30 +3084,13 @@ function AppContent() {
     return () => clearTimeout(timeout);
   }, []);
 
-  if (showStartup) {
+  useEffect(() => {
+    setPendingRequests(demoPendingRequests);
+    setApprovedRequests([]);
+  }, [user?.uid]);
+
+  if (showStartup || authLoading) {
     return <StartupScreen />;
-  }
-
-  function login(identifier: string, password: string) {
-    const cleanIdentifier = identifier.trim().toLowerCase();
-    const admin = hardcodedAdmins.find(
-      account => (account.email.toLowerCase() === cleanIdentifier || account.username.toLowerCase() === cleanIdentifier) && account.password === password,
-    );
-    const nextUser: DemoUser = admin
-      ? { name: admin.name, email: admin.email, role: "admin" }
-      : { name: cleanIdentifier.includes("@") ? cleanIdentifier.split("@")[0] : cleanIdentifier, email: cleanIdentifier, role: "user" };
-    setUser(nextUser);
-    return nextUser;
-  }
-
-  function signup(name: string, email: string, _password: string) {
-    const nextUser: DemoUser = { name: name.trim(), email: email.trim().toLowerCase(), role: "user" };
-    setUser(nextUser);
-    return nextUser;
-  }
-
-  function logout() {
-    setUser(null);
   }
 
   function submitForReview(request: Omit<PendingHelpRequest, "id" | "submittedAt" | "distance" | "eta" | "timeAgo">) {
@@ -3219,6 +3106,7 @@ function AppContent() {
   }
 
   function approveRequest(id: string) {
+    if (!user?.emailVerified || user.role !== "admin") return;
     setPendingRequests(current => {
       const approved = current.find(item => item.id === id);
       if (!approved) return current;
@@ -3241,31 +3129,31 @@ function AppContent() {
   }
 
   function rejectRequest(id: string) {
+    if (!user?.emailVerified || user.role !== "admin") return;
     setPendingRequests(current => current.filter(item => item.id !== id));
   }
 
   return (
     <AppThemeContext.Provider value={{ mode: themeMode, isDark, setMode: setThemeMode }}>
-      <AuthContext.Provider value={{ user, login, signup, logout }}>
         <RequestReviewContext.Provider value={{ pendingRequests, approvedRequests, submitForReview, approveRequest, rejectRequest }}>
           <View style={[styles.appShell, isDark && styles.safeDark]}>
           <NavigationContainer theme={isDark ? DarkTheme : DefaultTheme}>
-            <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: isDark ? "#07111F" : "#F5F7FB" } }} initialRouteName="Login">
-              <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: isDark ? "#07111F" : "#F5F7FB" } }}>
+              {!user ? <Stack.Screen name="Login" component={LoginScreen} /> : !user.emailVerified ? <Stack.Screen name="VerifyEmail" component={LoginScreen} /> : <Stack.Group navigationKey={user.uid}>
               <Stack.Screen name="Mode" component={ModeScreen} />
               <Stack.Screen name="RequesterTabs" component={RequesterTabs} />
               <Stack.Screen name="HelperTabs" component={HelperTabs} />
               <Stack.Screen name="Timeline" component={TimelineScreen} />
               <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} />
-              <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+              {user.role === "admin" ? <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} /> : null}
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="AboutUs" component={AboutUsScreen} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+              </Stack.Group>}
             </Stack.Navigator>
           </NavigationContainer>
           </View>
         </RequestReviewContext.Provider>
-      </AuthContext.Provider>
     </AppThemeContext.Provider>
   );
 }
@@ -3680,159 +3568,6 @@ const styles = StyleSheet.create({
     color: "#1652B7",
     fontSize: 12,
     fontWeight: "800",
-  },
-  authScroll: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 28,
-    alignItems: "center",
-    backgroundColor: "#F5F7FB",
-  },
-  authScrollDark: {
-    backgroundColor: "#07111F",
-  },
-  authBrandBlock: {
-    alignItems: "center",
-    marginBottom: 22,
-  },
-  authLogoPlate: {
-    width: 108,
-    height: 88,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  authLogoPlateDark: {
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-  authLogo: {
-    width: 96,
-    height: 78,
-    resizeMode: "contain",
-  },
-  authTitle: {
-    color: "#172033",
-    fontSize: 26,
-    fontWeight: "700",
-    textAlign: "center",
-    letterSpacing: -0.7,
-  },
-  authTitleDark: {
-    color: "#F8FAFC",
-  },
-  authSub: {
-    color: "#64748B",
-    fontSize: 14,
-    fontWeight: "400",
-    lineHeight: 22,
-    textAlign: "center",
-    marginTop: 8,
-    marginBottom: 28,
-    maxWidth: 360,
-  },
-  authSubDark: {
-    color: "#94A3B8",
-  },
-  authCard: {
-    width: "100%",
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
-    padding: 20,
-    shadowColor: "#14213D",
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-    maxWidth: 440,
-  },
-  authCardDark: {
-    backgroundColor: "#0D1828",
-    borderColor: "rgba(148, 163, 184, 0.22)",
-    shadowOpacity: 0,
-  },
-  authModeSwitch: {
-    height: 48,
-    borderRadius: 15,
-    backgroundColor: "#EEF4FF",
-    flexDirection: "row",
-    padding: 4,
-    marginBottom: 14,
-  },
-  authModeSwitchDark: {
-    backgroundColor: "#081321",
-  },
-  authModeButton: {
-    flex: 1,
-    borderRadius: 13,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  authModeButtonActive: {
-    backgroundColor: "#FFFFFF",
-  },
-  authModeText: {
-    color: "#64748B",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  authModeTextActive: {
-    color: "#1652B7",
-  },
-  authInput: {
-    minHeight: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#D8DEE8",
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 14,
-    color: "#1F2937",
-    fontSize: 16,
-    fontWeight: "400",
-    marginBottom: 10,
-    paddingVertical: 14,
-  },
-  authInputDark: {
-    backgroundColor: "#081321",
-    borderColor: "rgba(148, 163, 184, 0.24)",
-    color: "#F8FAFC",
-  },
-  authSubmitButton: {
-    height: 54,
-    borderRadius: 12,
-    backgroundColor: "#1652B7",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  authSubmitText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  authDemoBox: {
-    marginTop: 14,
-    borderRadius: 16,
-    backgroundColor: "#FFF7ED",
-    borderWidth: 1,
-    borderColor: "rgba(249, 115, 22, 0.18)",
-    padding: 12,
-  },
-  authDemoTitle: {
-    color: "#9A3412",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  authDemoText: {
-    color: "#9A3412",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 18,
-    marginTop: 4,
   },
   adminHero: {
     paddingHorizontal: 20,

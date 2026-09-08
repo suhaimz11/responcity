@@ -4,6 +4,10 @@ Expo React Native demo app for Emerge Aid.
 
 ## Development With Expo Go
 
+Set up Firebase Authentication using [FIREBASE_SETUP.md](FIREBASE_SETUP.md)
+before signing in. Copy `.env.example` to `.env.local` and add your Firebase
+web app configuration. Demo credentials no longer grant access.
+
 ```bash
 cd mobile
 npm install
