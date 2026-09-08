@@ -956,7 +956,7 @@ function RequesterTabs({ navigation, route }: any) {
     if (typeof token === "number" && lastUnlockToken.current !== token) {
       lastUnlockToken.current = token;
       unlockCheckIn();
-      navigation.navigate("Check In");
+      navigation.navigate("RequesterTabs", { screen: "Check In" });
     }
   }, [navigation, route.params?.unlockCheckInToken]);
 
@@ -1157,7 +1157,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
   return (
     <Screen>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
-        <RequesterHeader onSwitch={() => rootNavigation.navigate("Mode")} />
+        <RequesterHeader onSwitch={() => rootNavigation.popTo("Mode")} />
         <View style={styles.sosWrap}>
         <Text style={[styles.sosPrompt, isDark && styles.textOnDark]}>Press the button for immediate help</Text>
           <View style={styles.sosRadarStage}>
@@ -1320,7 +1320,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
     setRequestLaunching(true);
     setTimeout(() => {
       setRequestLaunching(false);
-      navigation.navigate("RequesterTabs", { unlockCheckInToken: Date.now() });
+      navigation.popTo("RequesterTabs", { unlockCheckInToken: Date.now(), screen: "Check In" });
     }, 1850);
   }
 
@@ -1390,7 +1390,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
         </View>
       ) : null}
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.detailScroll}>
-        <RequesterHeader onSwitch={() => navigation.navigate("Mode")} />
+        <RequesterHeader onSwitch={() => navigation.popTo("Mode")} />
         <View style={[styles.detailSheet, isDark && styles.detailSheetDark]}>
           <View style={styles.sheetHandle} />
           <View style={styles.detailTopRow}>
@@ -1623,7 +1623,7 @@ function TimelineScreen({ navigation }: any) {
           </View>
         ))}
 
-        <Pressable style={styles.safeButton} onPress={() => navigation.navigate("RequesterTabs")}>
+        <Pressable style={styles.safeButton} onPress={() => navigation.popTo("RequesterTabs")}>
           <Text style={styles.safeButtonText}>I'm safe - close alert</Text>
         </Pressable>
       </ScrollView>
@@ -2143,7 +2143,7 @@ function HelperHome({ navigation, rootNavigation: providedRootNavigation }: any)
                   <Text style={styles.helperEyebrow}>HELPER MODE</Text>
                   <Text style={styles.helperHeroTitle}>Ready to Help?</Text>
                 </View>
-                <Pressable style={styles.helperSwitchButton} onPress={() => rootNavigation.navigate("Mode")}>
+                <Pressable style={styles.helperSwitchButton} onPress={() => rootNavigation.popTo("Mode")}>
                   <Ionicons name="swap-horizontal" size={16} color="#fff" />
                   <Text style={styles.helperSwitchText}>Switch</Text>
                 </Pressable>
@@ -4404,7 +4404,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   sosLaunchOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 50,
     backgroundColor: "#F40012",
     alignItems: "center",

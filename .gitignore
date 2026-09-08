@@ -5,6 +5,7 @@ mobile/node_modules/
 # Build output
 dist/
 build/
+/build-auth-check/
 mobile/dist/
 mobile/build/
 mobile/web-build/
@@ -21,11 +22,23 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
+# Firebase local cache and exported emulator data
+.firebase/
+firebase-export/
+
+# Local signing and service-account credentials
+credentials.json
+*.jks
+*.keystore
+service-account*.json
+serviceAccountKey*.json
+
 # Vercel
 .vercel/
 
 # Expo / React Native
 .expo/
+.expo-shared/
 mobile/.expo/
 mobile/.expo-shared/
 mobile/android/
@@ -42,6 +55,11 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Test and tooling output
+coverage/
+.nyc_output/
+.cache/
 
 # Package manager caches
 .npm/

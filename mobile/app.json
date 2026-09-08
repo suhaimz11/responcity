@@ -7,15 +7,6 @@
     "userInterfaceStyle": "light",
     "scheme": "emergeaid",
     "icon": "./assets/emerge-aid-icon-fit.png",
-    "splash": {
-      "image": "./assets/emerge-aid-splash-transparent.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FAFCFF"
-    },
-    "androidStatusBar": {
-      "backgroundColor": "#FAFCFF",
-      "barStyle": "dark-content"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -43,7 +34,22 @@
       }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-status-bar",
+        {
+          "style": "dark"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/emerge-aid-splash-transparent.png",
+          "imageWidth": 190,
+          "resizeMode": "contain",
+          "backgroundColor": "#FAFCFF"
+        }
+      ]
     ]
   }
 }
