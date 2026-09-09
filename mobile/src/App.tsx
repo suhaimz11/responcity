@@ -30,6 +30,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { AuthScreen } from "./auth/AuthScreen";
 import { authErrorMessage } from "./auth/policy";
+import { WebAnalytics } from "./WebAnalytics";
 
 type RootStackParamList = {
   Login: undefined;
@@ -3068,7 +3069,7 @@ function SettingsLink({
 }
 
 export default function App() {
-  return <SafeAreaProvider><AuthProvider><AppContent /></AuthProvider></SafeAreaProvider>;
+  return <SafeAreaProvider><AuthProvider><AppContent /><WebAnalytics /></AuthProvider></SafeAreaProvider>;
 }
 
 function AppContent() {
