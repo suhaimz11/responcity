@@ -1,6 +1,9 @@
 import type { FirebaseApp } from "firebase/app";
-import { browserLocalPersistence, initializeAuth } from "firebase/auth";
+import { browserLocalPersistence, browserPopupRedirectResolver, initializeAuth } from "firebase/auth";
 
 export function initializePersistentAuth(app: FirebaseApp) {
-  return initializeAuth(app, { persistence: browserLocalPersistence });
+  return initializeAuth(app, {
+    persistence: browserLocalPersistence,
+    popupRedirectResolver: browserPopupRedirectResolver,
+  });
 }
