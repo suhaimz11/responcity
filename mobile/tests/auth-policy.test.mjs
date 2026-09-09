@@ -42,6 +42,6 @@ test("Google sign-in failures give actionable messages", () => {
   assert.match(authErrorMessage({ code: "auth/account-exists-with-different-credential" }), /original method/i);
 });
 test("unknown errors never expose raw server details", () => {
-  assert.equal(authErrorMessage({ message: "secret diagnostic", code: "unknown" }), "Something went wrong. Please try again.");
+  assert.equal(authErrorMessage({ message: "secret diagnostic", code: "unknown" }), "Authentication failed (unknown). Please try again.");
   assert.equal(authErrorMessage(null), "Something went wrong. Please try again.");
 });
