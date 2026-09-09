@@ -13,10 +13,11 @@ shows a setup notice and disables sign-in; there is no demo bypass.
 3. Under **Project settings > General > Your apps**, register a **Web app**.
    The Firebase JavaScript SDK uses this configuration for web, Android, and
    iOS, including Expo Go. Firebase Hosting is not needed for this step.
-4. Copy `mobile/.env.example` to `mobile/.env.local`. Fill in the four values
-   from the web app's `firebaseConfig` object. Do not paste an Admin SDK key,
-   private key, or service-account JSON. The app identifiers are public and
-   are embedded in the client bundle; authorization belongs on the server.
+4. The Emerge Aid Firebase web configuration is included in the app because
+   Firebase client identifiers are public. To connect a different staging
+   project, copy `mobile/.env.example` to `mobile/.env.local` and fill in its
+   four values. Do not paste an Admin SDK key, private key, or service-account
+   JSON. Authorization belongs in Firebase rules and trusted server code.
 5. In Authentication settings, configure a minimum password length of eight
    characters. Enable email enumeration protection if it is not already on.
 6. Review the verification and reset email templates. Add the actual web
@@ -27,10 +28,16 @@ shows a setup notice and disables sign-in; there is no demo bypass.
    network access to Expo services, set `EXPO_OFFLINE=1`; Firebase auth itself
    still requires internet access.
 
-For EAS builds and hosted web exports, supply these same four environment
-variables in the corresponding build environment. Use a separate Firebase
-project for production. Editing local configuration does not update a bundle
-that has already been built.
+For staging, supply these four environment variables in the corresponding EAS
+or Vercel build environment. Production builds use the checked-in Emerge Aid
+client configuration by default. Editing local configuration does not update a
+bundle that has already been built.
+
+For Vercel, copy the hostname only (for example `your-app.vercel.app`) from the
+deployment URL and add it under **Firebase Console > Authentication > Settings
+> Authorized domains**. Add every production custom domain that serves the app.
+After changing code or build variables, trigger a new Vercel deployment because
+Expo embeds client configuration when it creates the web bundle.
 
 ## Verify the flow with your project
 

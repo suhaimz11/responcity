@@ -4,11 +4,13 @@ import { initializePersistentAuth } from "./persistence";
 
 // Expo replaces direct EXPO_PUBLIC references at build time. These identifiers
 // are public client configuration, never Admin SDK or service-account secrets.
+// Firebase's web config identifies this public client; it is not a secret.
+// Environment variables can override it for staging or other deployments.
 const config = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyB2Jh-ayFX6FcZnKapBkCR1dj_PGfd1-uA",
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "emergeaid-e702f.firebaseapp.com",
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "emergeaid-e702f",
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:154033445433:web:65250477ef1f76ef6a8be8",
 };
 
 export const firebaseConfigured = Object.values(config).every(value => Boolean(value?.trim()));
