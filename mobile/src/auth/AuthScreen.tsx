@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useAuth } from "./AuthProvider";
 import { authErrorMessage, validateCredentials } from "./policy";
+import { Ionicons } from "@expo/vector-icons";
 
 export function AuthScreen({ dark = false }: { dark?: boolean }) {
   const auth = useAuth();
@@ -126,6 +127,18 @@ export function AuthScreen({ dark = false }: { dark?: boolean }) {
             </Pressable>
           </> : null}
           {button(busy ? "Please wait…" : mode === "signup" ? "Create account" : mode === "reset" ? "Send reset link" : "Sign in", submit, false, busy || !auth.configured)}
+          {mode !== "reset" && auth.googleSignInAvailable ? <>
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: dark ? "#344155" : "#D8DEE8" }]} />
+              <Text style={[styles.dividerText, { color: muted }]}>or</Text>
+              <View style={[styles.dividerLine, { backgroundColor: dark ? "#344155" : "#D8DEE8" }]} />
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Continue with Google" accessibilityState={{ disabled: busy, busy }} disabled={busy || !auth.configured} onPress={() => { void run(auth.loginWithGoogle); }}
+              style={({ pressed }) => [styles.googleButton, { borderColor: dark ? "#46556D" : "#CBD5E1" }, (busy || pressed) && styles.dimmed]}>
+              <Ionicons name="logo-google" size={19} color={dark ? "#F8FAFC" : "#172033"} />
+              <Text style={[styles.googleButtonText, { color: text }]}>Continue with Google</Text>
+            </Pressable>
+          </> : null}
           {button(mode === "reset" ? "Back to sign in" : "Forgot password?", () => changeMode(mode === "reset" ? "login" : "reset"), true)}
         </>}
         {busy ? <ActivityIndicator accessibilityLabel="Working" color={dark ? "#93C5FD" : "#1652B7"} style={styles.activity} /> : null}
@@ -156,4 +169,9 @@ const styles = StyleSheet.create({
   notice: { fontSize: 14, lineHeight: 21, marginVertical: 12 },
   error: { color: "#BE123C", fontSize: 14, lineHeight: 21, marginTop: 12 },
   activity: { marginTop: 12 },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 20, marginBottom: 12 },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  dividerText: { fontSize: 13 },
+  googleButton: { minHeight: 52, borderWidth: 1, borderRadius: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingHorizontal: 16 },
+  googleButtonText: { fontSize: 14, fontWeight: "600" },
 });

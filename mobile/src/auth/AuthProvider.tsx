@@ -6,15 +6,18 @@ import {
 } from "firebase/auth";
 import { firebaseConfigured, getFirebaseAuth } from "./firebase";
 import { authErrorMessage, roleFromClaims, type AppUser } from "./policy";
+import { googleSignInAvailable, signInWithGoogle } from "./googleSignIn";
 
 type AuthContextValue = {
   user: AppUser | null;
   loading: boolean;
   configured: boolean;
+  googleSignInAvailable: boolean;
   sessionError: string;
   verificationSentAt: number;
   retrySession: () => void;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -131,8 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return current.emailVerified;
   }
 
-  return <AuthContext.Provider value={{ user, loading, configured: firebaseConfigured, sessionError,
+  return <AuthContext.Provider value={{ user, loading, configured: firebaseConfigured, googleSignInAvailable, sessionError,
     verificationSentAt, retrySession: () => setRetry(value => value + 1),
-    login, signup, logout, resetPassword, sendVerification, refreshVerification,
+    login, loginWithGoogle: signInWithGoogle, signup, logout, resetPassword, sendVerification, refreshVerification,
   }}>{children}</AuthContext.Provider>;
 }

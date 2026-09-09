@@ -32,7 +32,12 @@ export function authErrorMessage(error: unknown): string {
     case "auth/network-request-failed": return "Couldn’t connect. Check your connection and try again.";
     case "auth/user-disabled": return "This account is unavailable. Contact support for help.";
     case "auth/requires-recent-login": return "Please sign in again to continue.";
-    case "auth/operation-not-allowed": return "Email sign-in is not available yet. Please contact support.";
+    case "auth/operation-not-allowed": return "This sign-in method is not enabled yet. Please contact support.";
+    case "auth/popup-closed-by-user": return "Google sign-in was cancelled.";
+    case "auth/popup-blocked": return "Your browser blocked the Google sign-in window. Allow popups and try again.";
+    case "auth/account-exists-with-different-credential": return "An account already uses this email. Sign in with its original method first.";
+    case "auth/unauthorized-domain": return "Google sign-in is not enabled for this website domain yet.";
+    case "auth/google-native-not-configured": return "Google sign-in on mobile requires an Emerge Aid development build.";
     case "auth/invalid-api-key":
     case "auth/configuration-not-found": return "Sign-in is not configured correctly. Please contact support.";
     default: return "Something went wrong. Please try again.";
