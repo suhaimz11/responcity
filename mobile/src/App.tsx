@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Alert,
@@ -18,7 +18,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { DarkTheme, DefaultTheme, NavigationContainer } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, NavigationContainer, useFocusEffect } from "@react-navigation/native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -218,8 +218,10 @@ const theme = {
   card: "#FFFFFF",
   text: "#203B36",
   muted: "#647870",
-  border: "rgba(255, 107, 53, 0.16)",
+  border: "rgba(20, 125, 115, 0.16)",
 };
+
+const brandGradient: [string, string] = ["#147D73", "#193D39"];
 
 const categories: Category[] = [
   { id: "medical", label: "Medical", icon: "medical", color: "#CC4051", bg: "#FFF0F3" },
@@ -814,7 +816,7 @@ function Screen({ children, dark }: { children: React.ReactNode; dark?: boolean 
   const useDark = dark ?? isDark;
   const tabBarHeight = useContext(BottomTabBarHeightContext);
   const entrance = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
     let animation: Animated.CompositeAnimation | undefined;
     const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", reduced => {
@@ -823,11 +825,11 @@ function Screen({ children, dark }: { children: React.ReactNode; dark?: boolean 
     AccessibilityInfo.isReduceMotionEnabled().then(reduced => {
       if (!active || reduced) return;
       entrance.setValue(0);
-      animation = Animated.timing(entrance, { toValue: 1, duration: 320, useNativeDriver: true });
+      animation = Animated.timing(entrance, { toValue: 1, duration: 380, useNativeDriver: true });
       animation.start();
     }).catch(() => {});
     return () => { active = false; animation?.stop(); subscription.remove(); };
-  }, [entrance]);
+  }, [entrance]));
   return (
     <SafeAreaView edges={tabBarHeight == null ? ["top", "right", "bottom", "left"] : ["top", "right", "left"]} style={[styles.safe, useDark && styles.safeDark]}>
       <KeyboardAvoidingView style={styles.screenBody} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -839,7 +841,7 @@ function Screen({ children, dark }: { children: React.ReactNode; dark?: boolean 
 
 function BrandHeader({ mode, onSwitch }: { mode?: string; onSwitch?: () => void }) {
   return (
-    <LinearGradient colors={[theme.orange, theme.red]} style={styles.hero}>
+    <LinearGradient colors={brandGradient} style={styles.hero}>
       <View style={styles.heroRow}>
         <View style={styles.logoMark}>
           <Image source={emergeAidLogo} style={styles.logoImage} />
@@ -882,14 +884,14 @@ function ModeScreen({ navigation }: any) {
           title="Find help"
           subtitle="Request emergency assistance from nearby helpers"
           icon="medkit"
-          colors={["#193D39", "#147D73"]}
+          colors={brandGradient}
           onPress={() => navigation.navigate("RequesterTabs")}
         />
         <ModeCard
           title="Lend a hand"
           subtitle="Respond to requests from people in need nearby"
           icon="hand-left"
-          colors={["#249C8D", "#147D73"]}
+          colors={brandGradient}
           onPress={() => navigation.navigate("HelperTabs")}
         />
         {user?.role === "admin" ? (
@@ -897,7 +899,7 @@ function ModeScreen({ navigation }: any) {
             title="Admin Review"
             subtitle="Approve help requests before they appear to helpers"
             icon="shield-checkmark"
-            colors={["#193D39", "#147D73"]}
+            colors={brandGradient}
             onPress={() => navigation.navigate("AdminDashboard")}
           />
         ) : null}
@@ -1593,7 +1595,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
 
 function RequesterHeader({ onSwitch }: { onSwitch: () => void }) {
   return (
-    <LinearGradient colors={["#FF5A3D", "#E71933"]} style={styles.requesterHeader}>
+    <LinearGradient colors={brandGradient} style={styles.requesterHeader}>
       <View style={styles.requesterHeaderLogo}>
         <Image source={emergeAidLogo} style={styles.requesterHeaderLogoImage} />
       </View>
@@ -2152,7 +2154,7 @@ function HelperHome({ navigation, rootNavigation: providedRootNavigation }: any)
       <FlatList
         ListHeaderComponent={
           <>
-            <LinearGradient colors={["#147D73", "#193D39"]} style={styles.helperHero}>
+            <LinearGradient colors={brandGradient} style={styles.helperHero}>
               <View style={styles.helperHeroTop}>
                 <View style={styles.helperLogoBox}>
                   <Image source={emergeAidLogo} style={styles.helperLogoImage} />
@@ -2270,7 +2272,7 @@ function MissionChat({ request, onBack }: { request: Request; onBack: () => void
   return (
     <Screen>
       <View style={[styles.chatScreen, isDark && styles.darkScreen]}>
-        <LinearGradient colors={["#147D73", "#2F75C8"]} style={styles.chatHeader}>
+        <LinearGradient colors={brandGradient} style={styles.chatHeader}>
           <Pressable style={styles.chatBackButton} onPress={onBack}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </Pressable>
@@ -2530,7 +2532,7 @@ function ResponderStats() {
   return (
     <Screen>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.rankingScroll}>
-        <LinearGradient colors={["#147D73", "#193D39"]} style={styles.rankingHero}>
+        <LinearGradient colors={brandGradient} style={styles.rankingHero}>
           <Text style={styles.rankingEyebrow}>HELPER RANK</Text>
           <View style={styles.rankingTierRow}>
             <View style={[styles.rankingTierIcon, { backgroundColor: currentTier.color }]}>
@@ -2816,7 +2818,7 @@ function AdminDashboardScreen({ navigation }: any) {
       <FlatList
         ListHeaderComponent={
           <>
-            <LinearGradient colors={["#193D39", "#147D73"]} style={styles.adminHero}>
+            <LinearGradient colors={brandGradient} style={styles.adminHero}>
               <View style={styles.adminHeroTop}>
                 <View>
                   <Text style={styles.adminEyebrow}>ADMIN REVIEW</Text>
@@ -4426,8 +4428,8 @@ const styles = StyleSheet.create({
   },
   requesterHeader: {
     marginHorizontal: 0,
-    paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingHorizontal: 18,
+    paddingTop: 26,
     paddingBottom: 22,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,

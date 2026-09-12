@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "154033445433",
+    "project_id": "emergeaid-e702f",
+    "storage_bucket": "emergeaid-e702f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:154033445433:android:0aaa6d52c3dbe4816a8be8",
+        "android_client_info": {
+          "package_name": "com.emergeaid.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "154033445433-2vvbp9q5dc41cectkpgc11gg2d5no7ek.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt7AJqoXPpM7WpAiMkw5jxu9NpB4VT-eA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "154033445433-2vvbp9q5dc41cectkpgc11gg2d5no7ek.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
