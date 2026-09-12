@@ -1658,6 +1658,7 @@ function SafeCheckIn({
   session: EmergencySession;
   setSession: React.Dispatch<React.SetStateAction<EmergencySession>>;
 }) {
+  const { isDark } = useAppTheme();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [sosAnimationDone, setSosAnimationDone] = useState(false);
@@ -1746,9 +1747,9 @@ function SafeCheckIn({
           <View style={styles.checkIconSoft}>
             <Ionicons name="lock-closed" size={34} color="#147D73" />
           </View>
-          <Text style={styles.checkTitle}>Safe Check-In locked</Text>
-          <Text style={styles.checkSub}>
-            Send an emergency request first. Once your selected buddies are notified, this page becomes available for live tracing.
+          <Text style={[styles.checkTitle, isDark && styles.textOnDark]}>Your safety space</Text>
+          <Text style={[styles.checkSub, isDark && styles.mutedOnDark]}>
+            Start with a help request. Once your buddies are notified, you can begin a check-in here.
           </Text>
         </View>
       </Screen>
@@ -1758,30 +1759,32 @@ function SafeCheckIn({
   if (session.status === "active") {
     return (
       <Screen>
-        <View style={styles.activeHeader}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
+        <LinearGradient colors={brandGradient} style={styles.activeHeader}>
           <Text style={styles.activeEyebrow}>● SESSION ACTIVE</Text>
-          <Text style={styles.activeTitle}>You're being monitored</Text>
-          <Text style={styles.activeSub}>End the session when you're safe</Text>
-        </View>
+          <Text style={styles.activeTitle}>Stay connected.</Text>
+          <Text style={styles.activeSub}>Your check-in is running. You control when it ends.</Text>
+        </LinearGradient>
         <View style={styles.checkBody}>
-          <View style={styles.timerCard}>
-            <Text style={styles.timerLabel}>SESSION TIME</Text>
-            <Text style={styles.timerValue}>{formatElapsed(session.elapsedSeconds)}</Text>
-            <Text style={styles.timerCaption}>minutes elapsed</Text>
+          <View style={[styles.timerCard, isDark && styles.surfaceDark]}>
+            <Text style={[styles.timerLabel, isDark && styles.mutedOnDark]}>SESSION TIME</Text>
+            <Text style={[styles.timerValue, isDark && styles.textOnDark]}>{formatElapsed(session.elapsedSeconds)}</Text>
+            <Text style={[styles.timerCaption, isDark && styles.mutedOnDark]}>elapsed · minutes : seconds</Text>
           </View>
-          <View style={styles.buddyNotice}>
-            <Ionicons name="people" size={18} color="#2E7D32" />
-            <Text style={styles.buddyNoticeText}>{session.buddyCount} buddies are watching your session</Text>
+          <View style={[styles.buddyNotice, isDark && styles.surfaceDark]}>
+            <Ionicons name="people" size={18} color="#147D73" />
+            <Text style={[styles.buddyNoticeText, isDark && styles.textOnDark]}>{session.buddyCount} buddies are watching your session</Text>
           </View>
-          <Pressable style={[styles.checkAction, styles.safeEndAction]} onPress={endSession}>
+          <Pressable accessibilityRole="button" style={({ pressed }) => [styles.checkAction, styles.safeEndAction, pressed && styles.categoryPressed]} onPress={endSession}>
             <Ionicons name="shield-checkmark" size={19} color="#fff" />
-            <Text style={styles.checkActionText}>I'm Safe - End Session</Text>
+            <Text style={styles.checkActionText}>I'm safe · End check-in</Text>
           </Pressable>
-          <Pressable style={[styles.checkAction, styles.sosAction]} onPress={triggerSos}>
+          <Pressable accessibilityRole="button" style={({ pressed }) => [styles.checkAction, styles.sosAction, pressed && styles.categoryPressed]} onPress={triggerSos}>
             <Ionicons name="warning" size={19} color="#fff" />
-            <Text style={styles.checkActionText}>EMERGENCY - Trigger SOS</Text>
+            <Text style={styles.checkActionText}>Send emergency SOS</Text>
           </Pressable>
         </View>
+        </ScrollView>
       </Screen>
     );
   }
@@ -1793,27 +1796,27 @@ function SafeCheckIn({
           <View style={styles.checkIconSuccess}>
             <Ionicons name="shield-checkmark" size={34} color={theme.green} />
           </View>
-          <Text style={styles.checkTitle}>Session Complete!</Text>
-          <Text style={styles.checkSub}>Session lasted {formatElapsed(session.elapsedSeconds)}. How would you rate your experience with Emerge Aid?</Text>
-          <View style={styles.reviewCard}>
-            <Text style={styles.reviewTitle}>Rate your overall experience</Text>
+          <Text style={[styles.checkTitle, isDark && styles.textOnDark]}>You’re safe. That matters.</Text>
+          <Text style={[styles.checkSub, isDark && styles.mutedOnDark]}>Session lasted {formatElapsed(session.elapsedSeconds)}. How would you rate your experience with Emerge Aid?</Text>
+          <View style={[styles.reviewCard, isDark && styles.surfaceDark]}>
+            <Text style={[styles.reviewTitle, isDark && styles.textOnDark]}>Rate your overall experience</Text>
             <View style={styles.ratingRow}>
               {[1, 2, 3, 4, 5].map(value => (
-                <Pressable key={value} onPress={() => setRating(value)}>
-                  <Ionicons name={rating >= value ? "person" : "person-outline"} size={30} color={rating >= value ? theme.green : "#9CA3AF"} />
+                <Pressable key={value} accessibilityRole="button" accessibilityLabel={`${value} star${value === 1 ? "" : "s"}`} accessibilityState={{ selected: rating === value }} style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }} onPress={() => setRating(value)}>
+                  <Ionicons name={rating >= value ? "star" : "star-outline"} size={30} color={rating >= value ? theme.green : "#9CA3AF"} />
                 </Pressable>
               ))}
             </View>
           </View>
-          <View style={styles.reviewCard}>
-            <Text style={styles.reviewTitle}>Leave a comment (optional)</Text>
+          <View style={[styles.reviewCard, isDark && styles.surfaceDark]}>
+            <Text style={[styles.reviewTitle, isDark && styles.textOnDark]}>Leave a comment (optional)</Text>
             <TextInput
               value={comment}
               onChangeText={setComment}
               multiline
               placeholder="Tell us how it went..."
               placeholderTextColor="#8B95A1"
-              style={styles.reviewInput}
+              style={[styles.reviewInput, isDark && styles.inputDark]}
             />
           </View>
           <Pressable style={[styles.submitReviewButton, rating === 0 && styles.submitReviewDisabled]} disabled={rating === 0} onPress={submitReview}>
@@ -1821,7 +1824,7 @@ function SafeCheckIn({
             <Text style={styles.submitReviewText}>Submit Review</Text>
           </Pressable>
           <Pressable onPress={submitReview}>
-            <Text style={styles.skipReview}>Skip for now</Text>
+            <Text style={[styles.skipReview, isDark && styles.mutedOnDark]}>Skip for now</Text>
           </Pressable>
         </ScrollView>
       </Screen>
@@ -1862,8 +1865,8 @@ function SafeCheckIn({
       <Screen>
         <View style={styles.checkInCenter}>
           <Ionicons name="shield-checkmark" size={54} color={theme.green} />
-          <Text style={[styles.checkTitle, { color: "#2E7D32" }]}>Thank you!</Text>
-          <Text style={[styles.checkSub, { color: "#2E7D32" }]}>Your review has been submitted. Stay safe!</Text>
+          <Text style={[styles.checkTitle, isDark && styles.textOnDark]}>Thank you!</Text>
+          <Text style={[styles.checkSub, isDark && styles.mutedOnDark]}>Your review has been submitted. Stay safe!</Text>
         </View>
       </Screen>
     );
@@ -1875,32 +1878,30 @@ function SafeCheckIn({
         <View style={styles.checkIconSoft}>
           <Ionicons name="shield-checkmark" size={38} color="#147D73" />
         </View>
-        <Text style={styles.checkTitle}>Safe Check-In</Text>
-        <Text style={styles.checkSub}>
-          Activate before meeting someone new or entering an unfamiliar place. Your session stays active until you end it. If you trigger SOS, your buddies and emergency contacts are alerted instantly.
+        <Text style={[styles.checkTitle, isDark && styles.textOnDark]}>Safe Check-In</Text>
+        <Text style={[styles.checkSub, isDark && styles.mutedOnDark]}>
+          A little reassurance when you’re somewhere unfamiliar. Start a session, stay connected, and end it when you’re safe.
         </Text>
         {session.buddiesNotified ? (
-          <View style={styles.buddyNotice}>
-            <Ionicons name="notifications" size={18} color="#2E7D32" />
-            <Text style={styles.buddyNoticeText}>{session.buddyCount} selected buddies notified and ready to trace you</Text>
+          <View style={[styles.buddyNotice, isDark && styles.surfaceDark]}>
+            <Ionicons name="notifications" size={18} color="#147D73" />
+            <Text style={[styles.buddyNoticeText, isDark && styles.textOnDark]}>{session.buddyCount} selected buddies notified and ready to trace you</Text>
           </View>
         ) : null}
-        <Pressable style={styles.startCheckButton} onPress={startSession}>
+        <Pressable accessibilityRole="button" style={({ pressed }) => [styles.startCheckButton, pressed && styles.categoryPressed]} onPress={startSession}>
           <Ionicons name="shield-checkmark" size={19} color="#fff" />
-          <Text style={styles.startCheckText}>Start Safe Check-In</Text>
+          <Text style={styles.startCheckText}>Start my check-in</Text>
         </Pressable>
-        <View style={styles.howItWorksCard}>
-          <Text style={styles.howItWorksTitle}>HOW IT WORKS</Text>
+        <View style={[styles.howItWorksCard, isDark && styles.surfaceDark]}>
+          <Text style={[styles.howItWorksTitle, isDark && styles.mutedOnDark]}>THREE SIMPLE STEPS</Text>
           {[
-            "Session runs until you manually end it",
-            "No auto-trigger - you stay in control",
-            "Buddy helpers are notified only if you press SOS",
-            "Emergency contacts alerted on SOS",
-            "Rate your experience when the mission ends",
+            "Start your check-in before you head out.",
+            "Use SOS if you need urgent help. Nothing triggers automatically.",
+            "Tap I’m safe when you’re ready to finish.",
           ].map((line, index) => (
             <View key={line} style={styles.howRow}>
-              <Ionicons name={index < 2 ? "shield-checkmark-outline" : index < 4 ? "warning-outline" : "star-outline"} size={16} color={index < 2 ? theme.green : index < 4 ? theme.red : "#7C4DFF"} />
-              <Text style={styles.howText}>{line}</Text>
+              <Ionicons name={index === 0 ? "play-circle-outline" : index === 1 ? "alert-circle-outline" : "checkmark-circle-outline"} size={22} color="#147D73" />
+              <Text style={[styles.howText, isDark && styles.mutedOnDark]}>{line}</Text>
             </View>
           ))}
         </View>
@@ -4861,7 +4862,7 @@ const styles = StyleSheet.create({
   mediaButton: {
     minWidth: 190,
     marginTop: 18,
-    backgroundColor: "#2F6FBA",
+    backgroundColor: "#147D73",
   },
   photoButton: {
     backgroundColor: "#2F6FBA",
@@ -5164,10 +5165,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   checkIntro: {
-    paddingHorizontal: 22,
-    paddingTop: 54,
-    paddingBottom: 34,
-    alignItems: "center",
+    padding: 24, paddingTop: 36, paddingBottom: 36, alignItems: "center",
   },
   checkInCenter: {
     flex: 1,
@@ -5176,52 +5174,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   checkIconSoft: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: "#EAF2F8",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 26,
+    width: 80, height: 80, borderRadius: 26, backgroundColor: "#E1EEE7", alignItems: "center", justifyContent: "center", marginBottom: 24,
   },
   checkIconSuccess: {
-    width: 108,
-    height: 108,
-    borderRadius: 54,
-    backgroundColor: "#EAF8ED",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
+    width: 80, height: 80, borderRadius: 26, backgroundColor: "#E1EEE7", alignItems: "center", justifyContent: "center", marginBottom: 24,
   },
   checkTitle: {
-    color: "#2D3748",
-    fontSize: 31,
-    fontWeight: "700",
-    textAlign: "center",
+    color: "#203B36", fontSize: 30, letterSpacing: -1, fontWeight: "700", textAlign: "center",
   },
   checkSub: {
-    color: "#7A8798",
-    fontSize: 15,
-    fontWeight: "600",
-    lineHeight: 24,
-    textAlign: "center",
-    marginTop: 16,
+    color: "#647870", fontSize: 15, lineHeight: 24, textAlign: "center", marginTop: 12, maxWidth: 440,
   },
   startCheckButton: {
-    width: "100%",
-    minHeight: 88,
-    borderRadius: 18,
-    backgroundColor: "#2F6FBA",
-    marginTop: 36,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    shadowColor: "#147D73",
-    shadowOpacity: 0.24,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 9 },
-    elevation: 5,
+    width: "100%", minHeight: 58, borderRadius: 18, backgroundColor: "#147D73", marginTop: 24, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
   },
   startCheckText: {
     color: "#fff",
@@ -5229,13 +5194,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   howItWorksCard: {
-    width: "100%",
-    marginTop: 32,
-    borderRadius: 18,
-    borderWidth: 1.2,
-    borderColor: "#D8DEE8",
-    backgroundColor: "#FFFFFF",
-    padding: 20,
+    width: "100%", marginTop: 24, borderRadius: 22, borderWidth: 1, borderColor: "#DFE7E1", backgroundColor: "#FFFFFF", padding: 22,
   },
   howItWorksTitle: {
     color: "#7A8798",
@@ -5251,57 +5210,25 @@ const styles = StyleSheet.create({
     marginBottom: 17,
   },
   howText: {
-    flex: 1,
-    color: "#4B5563",
-    fontSize: 14,
-    fontWeight: "700",
-    lineHeight: 20,
+    flex: 1, color: "#647870", fontSize: 14, lineHeight: 22,
   },
   activeHeader: {
-    backgroundColor: "#165FBA",
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    paddingHorizontal: 28,
-    paddingTop: 28,
-    paddingBottom: 32,
-    alignItems: "center",
+    padding: 28, paddingTop: 32, paddingBottom: 36, borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
   },
   activeEyebrow: {
-    color: "#63D96A",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    marginBottom: 10,
+    color: "#A9E8D6", fontSize: 11, fontWeight: "700", letterSpacing: 1.4, marginBottom: 14,
   },
   activeTitle: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "700",
+    color: "#FFFFFF", fontSize: 32, letterSpacing: -1, fontWeight: "700",
   },
   activeSub: {
-    color: "rgba(255,255,255,0.84)",
-    fontSize: 14,
-    fontWeight: "700",
-    marginTop: 7,
+    color: "#D5E9E1", fontSize: 14, lineHeight: 22, marginTop: 8,
   },
   checkBody: {
-    paddingHorizontal: 24,
-    paddingTop: 94,
-    paddingBottom: 26,
+    paddingHorizontal: 24, paddingTop: 24,
   },
   timerCard: {
-    minHeight: 218,
-    borderRadius: 22,
-    borderWidth: 1.2,
-    borderColor: "#D8DEE8",
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#193D39",
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    minHeight: 200, borderRadius: 26, borderWidth: 1, borderColor: "#DFE7E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center",
   },
   timerLabel: {
     color: "#9CA3AF",
@@ -5310,10 +5237,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.3,
   },
   timerValue: {
-    color: "#165FBA",
-    fontSize: 66,
-    fontWeight: "800",
-    marginTop: 12,
+    color: "#193D39", fontSize: 60, fontWeight: "600", letterSpacing: -2, fontVariant: ["tabular-nums"], marginTop: 12,
   },
   timerCaption: {
     color: "#7A8798",
@@ -5322,36 +5246,16 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   buddyNotice: {
-    width: "100%",
-    minHeight: 58,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: "#B9E3C0",
-    backgroundColor: "#EFFBEF",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 16,
-    marginTop: 18,
+    width: "100%", minHeight: 60, borderRadius: 18, borderWidth: 1, borderColor: "#D2E5DA", backgroundColor: "#E8F2EC", flexDirection: "row", alignItems: "center", gap: 12, padding: 16, marginTop: 18,
   },
   buddyNoticeText: {
-    flex: 1,
-    color: "#215C2A",
-    fontSize: 13,
-    fontWeight: "800",
-    lineHeight: 18,
+    flex: 1, color: "#306258", fontSize: 13, fontWeight: "500", lineHeight: 20,
   },
   checkAction: {
-    minHeight: 72,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 9,
-    marginTop: 18,
+    minHeight: 58, paddingHorizontal: 14, paddingVertical: 16, borderRadius: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 16,
   },
   safeEndAction: {
-    backgroundColor: "#2DBB2D",
+    backgroundColor: "#147D73",
   },
   sosAction: {
     backgroundColor: "#CC4051",
@@ -5377,16 +5281,10 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   reviewTitle: {
-    color: "#4B5563",
-    fontSize: 17,
-    fontWeight: "800",
-    textAlign: "center",
+    color: "#203B36", fontSize: 16, fontWeight: "600", textAlign: "center",
   },
   ratingRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 16,
-    marginTop: 24,
+    flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 18,
   },
   reviewInput: {
     minHeight: 126,
@@ -5427,12 +5325,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   sosTriggeredScreen: {
-    flex: 1,
-    backgroundColor: "#F40012",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 28,
-    overflow: "hidden",
+    flex: 1, backgroundColor: "#193D39", alignItems: "center", justifyContent: "center", paddingHorizontal: 28, overflow: "hidden",
   },
   sosPulseRing: {
     position: "absolute",
@@ -5451,14 +5344,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.12)",
   },
   sosTriggeredIcon: {
-    width: 116,
-    height: 116,
-    borderRadius: 58,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.5)",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 116, height: 116, borderRadius: 38, backgroundColor: "#CC4051", alignItems: "center", justifyContent: "center",
   },
   sosTriggeredTitle: {
     color: "#fff",
