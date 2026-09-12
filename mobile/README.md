@@ -34,3 +34,20 @@ The `preview` profile creates a standalone APK for demos.
 
 - Use Expo Go for early testing.
 - Use TestFlight later with an Apple Developer account.
+
+## Environment configuration
+
+Firebase configuration has no hard-coded fallback. Set all four variables from
+`.env.example` in `mobile/.env.local` for local development and in the build
+environment for Vercel and EAS. Never put Admin SDK or private credentials in
+`EXPO_PUBLIC_` variables: these values are embedded in the client bundle.
+
+For Android builds, download your Firebase Android app configuration as
+`mobile/google-services.json`. This file is ignored by Git. For remote builds,
+provide the file through your build environment and set `GOOGLE_SERVICES_JSON`
+to its path. The Expo config uses that path when supplied.
+
+If a credential alert was raised, review the exact key in Google Cloud, its API
+and application restrictions, and its usage. Ignoring files does not remove
+previous commits or revoke keys. Rotate/revoke any credential confirmed to be
+secret or misused, and update the local and hosted build environments.

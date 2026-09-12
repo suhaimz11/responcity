@@ -65,3 +65,12 @@ coverage/
 .npm/
 .pnpm-store/
 .yarn/
+
+# Local Firebase app configuration and private signing material
+google-services.json
+GoogleService-Info.plist
+*.p8
+*.p12
+*.pfx
+*.key
+*.pem
