@@ -539,7 +539,7 @@ const communityFeed: CommunityPost[] = [
     time: "2h ago",
     message: "Just helped 3 neighbors during the storm. Amazing community spirit - Emerge Aid works!",
     likes: 24,
-    color: "#F45A3D",
+    color: "#47796B",
   },
   {
     id: "c2",
@@ -558,7 +558,7 @@ const communityFeed: CommunityPost[] = [
     time: "8h ago",
     message: "Completed my 40th mission today. Every small act of help creates a ripple of good.",
     likes: 31,
-    color: "#DF6654",
+    color: "#6A8070",
   },
 ];
 
@@ -1819,13 +1819,28 @@ function SafeCheckIn({
               style={[styles.reviewInput, isDark && styles.inputDark]}
             />
           </View>
-          <Pressable style={[styles.submitReviewButton, rating === 0 && styles.submitReviewDisabled]} disabled={rating === 0} onPress={submitReview}>
-            <Ionicons name="send" size={18} color="#fff" />
-            <Text style={styles.submitReviewText}>Submit Review</Text>
-          </Pressable>
-          <Pressable onPress={submitReview}>
-            <Text style={[styles.skipReview, isDark && styles.mutedOnDark]}>Skip for now</Text>
-          </Pressable>
+          <View style={styles.reviewActions}>
+            <Text accessibilityLiveRegion="polite" style={[styles.reviewActionHint, isDark && styles.mutedOnDark]}>
+              {rating === 0 ? "Choose a star rating to continue" : "Your feedback helps us improve"}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Submit review"
+              accessibilityState={{ disabled: rating === 0 }}
+              disabled={rating === 0}
+              onPress={submitReview}
+              style={({ pressed }) => [styles.submitReviewButton,
+                rating === 0 && styles.submitReviewDisabled,
+                rating === 0 && isDark && styles.submitReviewDisabledDark,
+                pressed && styles.submitReviewPressed]}
+            >
+              <Text style={[styles.submitReviewText, rating === 0 && { color: isDark ? "#A6BCB5" : "#536B62" }]}>Submit review</Text>
+              <Ionicons name="arrow-forward" size={18} color={rating === 0 ? (isDark ? "#A6BCB5" : "#536B62") : "#FFFFFF"} />
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={submitReview} style={({ pressed }) => [styles.skipReviewButton, pressed && { opacity: 0.6 }]}>
+              <Text style={[styles.skipReview, isDark && styles.mutedOnDark]}>Skip for now</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </Screen>
     );
@@ -2378,14 +2393,15 @@ function ResponderMap() {
     <Screen>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.communityScroll}>
         <Text style={[styles.communityTitle, isDark && styles.textOnDark]}>Community</Text>
+        <Text style={[styles.communitySubtitle, isDark && styles.mutedOnDark]}>Good people. Small acts. A stronger neighbourhood.</Text>
 
         <View style={[styles.communitySlider, isDark && styles.segmentDark]}>
-          <View style={[styles.communitySliderThumb, communityTab === "groups" && styles.communitySliderThumbRight]} />
-          <Pressable style={styles.communitySliderOption} onPress={() => setCommunityTab("feed")}>
-            <Text style={[styles.communitySliderText, communityTab === "feed" && styles.communitySliderTextActive]}>Feed</Text>
+
+          <Pressable accessibilityRole="tab" accessibilityState={{ selected: communityTab === "feed" }} style={({ pressed }) => [styles.communitySliderOption, communityTab === "feed" && styles.communityTabSelected, pressed && { opacity: 0.8 }]} onPress={() => setCommunityTab("feed")}>
+            <Text style={[styles.communitySliderText, isDark && styles.mutedOnDark, communityTab === "feed" && styles.communitySliderTextActive]}>Feed</Text>
           </Pressable>
-          <Pressable style={styles.communitySliderOption} onPress={() => setCommunityTab("groups")}>
-            <Text style={[styles.communitySliderText, communityTab === "groups" && styles.communitySliderTextActive]}>Group Missions</Text>
+          <Pressable accessibilityRole="tab" accessibilityState={{ selected: communityTab === "groups" }} style={({ pressed }) => [styles.communitySliderOption, communityTab === "groups" && styles.communityTabSelected, pressed && { opacity: 0.8 }]} onPress={() => setCommunityTab("groups")}>
+            <Text style={[styles.communitySliderText, isDark && styles.mutedOnDark, communityTab === "groups" && styles.communitySliderTextActive]}>Group Missions</Text>
           </Pressable>
         </View>
 
@@ -2432,7 +2448,7 @@ function OrgMeta({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
   const { isDark } = useAppTheme();
 
   return (
-    <View style={styles.orgMetaItem}>
+    <View style={[styles.orgMetaItem, isDark && styles.softPanelDark]}>
       <Ionicons name={icon} size={15} color="#147D73" />
       <Text style={[styles.orgMetaLabel, isDark && styles.mutedOnDark]}>{label}</Text>
       <Text style={[styles.orgMetaValue, isDark && styles.textOnDark]}>{value}</Text>
@@ -2482,7 +2498,7 @@ function CommunityPostCard({ post }: { post: CommunityPost }) {
       <Text style={[styles.communityMessage, isDark && styles.textOnDark]}>{post.message}</Text>
       <View style={styles.communityLikeRow}>
         <Ionicons name="heart-outline" size={16} color="#64748B" />
-        <Text style={styles.communityLikes}>{post.likes}</Text>
+        <Text style={[styles.communityLikes, isDark && styles.mutedOnDark]}>{post.likes}</Text>
       </View>
     </View>
   );
@@ -2511,8 +2527,8 @@ function GroupMissionCard({ mission }: { mission: GroupMission }) {
       </View>
       <Text style={[styles.groupMissionNeed, isDark && styles.textOnDark]}>{mission.need}</Text>
       <View style={styles.groupMissionFooter}>
-        <Text style={styles.groupMissionMeta}>{mission.location}</Text>
-        <Text style={styles.groupMissionSlots}>{mission.slots}</Text>
+        <Text style={[styles.groupMissionMeta, isDark && styles.mutedOnDark]}>{mission.location}</Text>
+        <Text style={[styles.groupMissionSlots, isDark && { color: "#8AD9C5" }]}>{mission.slots}</Text>
       </View>
     </View>
   );
@@ -5299,30 +5315,22 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
     marginTop: 18,
   },
+  reviewActions: { width: "100%", maxWidth: 440, marginTop: 26, alignItems: "center" },
+  reviewActionHint: { color: "#647870", fontSize: 12, lineHeight: 18, marginBottom: 12, textAlign: "center" },
+  submitReviewDisabledDark: { backgroundColor: "#253D35" },
+  submitReviewPressed: { backgroundColor: "#116A62", transform: [{ scale: 0.98 }] },
+  skipReviewButton: { minHeight: 44, paddingHorizontal: 24, marginTop: 8, alignItems: "center", justifyContent: "center" },
   submitReviewButton: {
-    width: "100%",
-    minHeight: 64,
-    borderRadius: 16,
-    backgroundColor: "#2F6FBA",
-    marginTop: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 9,
+    width: "100%", minHeight: 54, paddingHorizontal: 22, paddingVertical: 15, borderRadius: 18, backgroundColor: "#147D73", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12,
   },
   submitReviewDisabled: {
-    backgroundColor: "#CBD5E1",
+    backgroundColor: "#E0E8E2",
   },
   submitReviewText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "700",
+    color: "#FFFFFF", fontSize: 15, fontWeight: "600", letterSpacing: 0.1,
   },
   skipReview: {
-    color: "#64748B",
-    fontSize: 14,
-    fontWeight: "800",
-    marginTop: 22,
+    color: "#647870", fontSize: 14, fontWeight: "500",
   },
   sosTriggeredScreen: {
     flex: 1, backgroundColor: "#193D39", alignItems: "center", justifyContent: "center", paddingHorizontal: 28, overflow: "hidden",
@@ -6158,25 +6166,18 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
   },
+  communitySubtitle: { color: "#647870", fontSize: 14, lineHeight: 22, marginBottom: 24 },
+  communityTabSelected: { backgroundColor: "#147D73" },
   communityScroll: {
     paddingHorizontal: 18,
     paddingTop: 34,
     paddingBottom: 34,
   },
   communityTitle: {
-    color: "#2D3748",
-    fontSize: 31,
-    fontWeight: "800",
-    marginBottom: 18,
+    color: "#203B36", fontSize: 32, fontWeight: "700", letterSpacing: -1, marginBottom: 8,
   },
   communitySlider: {
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: "#E5E7EB",
-    flexDirection: "row",
-    padding: 5,
-    marginBottom: 18,
-    position: "relative",
+    minHeight: 54, borderRadius: 18, backgroundColor: "#E6EDE7", flexDirection: "row", padding: 5, gap: 4, marginBottom: 22,
   },
   communitySliderThumb: {
     position: "absolute",
@@ -6196,18 +6197,15 @@ const styles = StyleSheet.create({
     left: "50%",
   },
   communitySliderOption: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
+    flex: 1, minHeight: 44, paddingHorizontal: 10, borderRadius: 14, alignItems: "center", justifyContent: "center",
   },
   communitySliderText: {
-    color: "#64748B",
+    color: "#647870",
     fontSize: 14,
     fontWeight: "700",
   },
   communitySliderTextActive: {
-    color: "#2D3748",
+    color: "#FFFFFF",
   },
   orgInfoCard: {
     borderRadius: 20,
@@ -6234,24 +6232,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   orgName: {
-    color: "#2D3748",
+    color: "#203B36",
     fontSize: 16,
     fontWeight: "700",
   },
   orgRole: {
-    color: "#64748B",
+    color: "#647870",
     fontSize: 12,
     fontWeight: "700",
     marginTop: 3,
   },
   orgTypePill: {
     borderRadius: 999,
-    backgroundColor: "#EAF8ED",
+    backgroundColor: "#E7F2EE",
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   orgTypeText: {
-    color: "#2E7D32",
+    color: "#147D73",
     fontSize: 11,
     fontWeight: "700",
   },
@@ -6262,23 +6260,23 @@ const styles = StyleSheet.create({
   orgMetaItem: {
     minHeight: 44,
     borderRadius: 13,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F5F6F2",
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 12,
   },
   orgMetaLabel: {
-    color: "#64748B",
+    color: "#647870",
     fontSize: 11,
     fontWeight: "700",
     width: 82,
   },
   orgMetaValue: {
     flex: 1,
-    color: "#334155",
+    color: "#36534A",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   communityTrustCard: {
     borderRadius: 18,
@@ -6295,10 +6293,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   communityTrustText: {
-    flex: 1,
-    color: "#475569",
-    fontSize: 13,
-    fontWeight: "800",
+    flex: 1, color: "#647870", fontSize: 13, fontWeight: "400", lineHeight: 20,
   },
   communityPostCard: {
     borderRadius: 20,
@@ -6335,17 +6330,17 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   communityAuthor: {
-    color: "#2D3748",
+    color: "#203B36",
     fontSize: 15,
     fontWeight: "700",
   },
   communityRating: {
-    color: theme.orange,
+    color: "#147D73",
     fontSize: 12,
     fontWeight: "700",
   },
   communityTime: {
-    color: "#64748B",
+    color: "#647870",
     fontSize: 11,
     fontWeight: "700",
     marginTop: 2,
@@ -6368,21 +6363,17 @@ const styles = StyleSheet.create({
   },
   officialPill: {
     borderRadius: 10,
-    backgroundColor: "#EAF2F8",
+    backgroundColor: "#E7F2EE",
     paddingHorizontal: 9,
     paddingVertical: 6,
   },
   officialText: {
-    color: "#334155",
+    color: "#36534A",
     fontSize: 11,
     fontWeight: "700",
   },
   communityMessage: {
-    color: "#334155",
-    fontSize: 14,
-    fontWeight: "700",
-    lineHeight: 21,
-    marginTop: 16,
+    color: "#36534A", fontSize: 14, fontWeight: "400", lineHeight: 23, marginTop: 16,
   },
   communityLikeRow: {
     flexDirection: "row",
@@ -6391,7 +6382,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   communityLikes: {
-    color: "#64748B",
+    color: "#647870",
     fontSize: 12,
     fontWeight: "700",
   },
@@ -6423,33 +6414,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   groupMissionTitle: {
-    color: "#2D3748",
+    color: "#203B36",
     fontSize: 15,
     fontWeight: "700",
   },
   groupMissionOrg: {
-    color: "#64748B",
+    color: "#647870",
     fontSize: 12,
     fontWeight: "700",
     marginTop: 3,
   },
   groupMissionNeed: {
-    color: "#334155",
-    fontSize: 14,
-    fontWeight: "700",
-    lineHeight: 20,
-    marginTop: 14,
+    color: "#36534A", fontSize: 14, fontWeight: "400", lineHeight: 22, marginTop: 14,
   },
   groupMissionFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 14,
+    flexDirection: "row", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between", marginTop: 16,
   },
   groupMissionMeta: {
-    color: "#64748B",
+    color: "#647870",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   groupMissionSlots: {
     color: "#147D73",
