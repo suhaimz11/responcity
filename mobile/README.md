@@ -37,9 +37,12 @@ The `preview` profile creates a standalone APK for demos.
 
 ## Environment configuration
 
-Firebase configuration has no hard-coded fallback. Set all four variables from
-`.env.example` in `mobile/.env.local` for local development and in the build
-environment for Vercel and EAS. Never put Admin SDK or private credentials in
+The app includes public Firebase client defaults so production sign-in works
+without build overrides. To use another Firebase project, set all four variables
+from `.env.example` in `mobile/.env.local` or your Vercel/EAS build environment.
+Restrict the default key to Firebase APIs; never allow Gemini or unrelated APIs.
+See https://firebase.google.com/docs/projects/api-keys.
+Never put Admin SDK or private credentials in
 `EXPO_PUBLIC_` variables: these values are embedded in the client bundle.
 
 For Android builds, download your Firebase Android app configuration as
