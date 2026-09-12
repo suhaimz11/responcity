@@ -2187,7 +2187,8 @@ function HelperHome({ navigation, rootNavigation: providedRootNavigation }: any)
 
               <View style={styles.helperSegment}>
                 <Pressable
-                  style={[styles.helperSegmentButton, helperTab === "open" && styles.helperSegmentActive]}
+                  accessibilityRole="tab" accessibilityState={{ selected: helperTab === "open" }}
+                  style={({ pressed }) => [styles.helperSegmentButton, helperTab === "open" && styles.helperSegmentActive, pressed && { opacity: 0.8 }]}
                   onPress={() => setHelperTab("open")}
                 >
                   <Text style={[styles.helperSegmentText, helperTab === "open" && styles.helperSegmentTextActive]}>
@@ -2195,7 +2196,8 @@ function HelperHome({ navigation, rootNavigation: providedRootNavigation }: any)
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={[styles.helperSegmentButton, helperTab === "emergency" && styles.helperSegmentActive]}
+                  accessibilityRole="tab" accessibilityState={{ selected: helperTab === "emergency" }}
+                  style={({ pressed }) => [styles.helperSegmentButton, helperTab === "emergency" && styles.helperSegmentActive, pressed && { opacity: 0.8 }]}
                   onPress={() => setHelperTab("emergency")}
                 >
                   <View style={styles.helperEmergencyLabel}>
@@ -2236,16 +2238,16 @@ function HelperRequestCard({ request, onAccept }: { request: Request; onAccept: 
   const { isDark } = useAppTheme();
   const cat = categoryFor(request.category);
   return (
-    <View style={[styles.requestCard, isDark && styles.surfaceDark, { borderLeftColor: cat.color }, request.urgent && styles.urgentCard]}>
+    <View style={[styles.requestCard, isDark && styles.surfaceDark, request.urgent && styles.urgentCard]}>
       {request.buddy ? (
         <View style={styles.buddyRequestBadge}>
-          <Ionicons name="star" size={12} color="#B45309" />
+          <Ionicons name="star" size={12} color="#147D73" />
           <Text style={styles.buddyRequestText}>BUDDY REQUEST</Text>
         </View>
       ) : null}
       <View style={styles.requestRow}>
-        <View style={[styles.requestIcon, { backgroundColor: cat.bg }]}>
-          <Ionicons name={cat.icon} color={cat.color} size={24} />
+        <View style={[styles.requestIcon, { backgroundColor: isDark ? "#253D35" : "#E7F2EE" }]}>
+          <Ionicons name={cat.icon} color={isDark ? "#8AD9C5" : "#147D73"} size={24} />
         </View>
         <View style={styles.requestCopy}>
           <View style={styles.requestNameRow}>
@@ -2256,13 +2258,14 @@ function HelperRequestCard({ request, onAccept }: { request: Request; onAccept: 
               </View>
             ) : null}
           </View>
-          <Text style={[styles.requestCategoryText, { color: cat.color }]}>{cat.label.toUpperCase()}</Text>
+          <Text style={[styles.requestCategoryText, { color: isDark ? "#8AD9C5" : "#147D73" }]}>{cat.label}</Text>
           <Text style={[styles.requestMessage, isDark && styles.mutedOnDark]}>{request.message}</Text>
-          <Text style={styles.metaText}>{request.distance} - {request.timeAgo ?? request.eta}</Text>
+          <Text style={[styles.metaText, isDark && styles.mutedOnDark]}>{request.distance} - {request.timeAgo ?? request.eta}</Text>
         </View>
       </View>
-      <Pressable style={styles.acceptButton} onPress={onAccept}>
-        <Text style={styles.acceptButtonText}>I Can Help</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Offer help to ${request.user}`} style={({ pressed }) => [styles.acceptButton, pressed && styles.acceptButtonPressed]} onPress={onAccept}>
+        <Text style={styles.acceptButtonText}>I can help</Text>
+        <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
       </Pressable>
     </View>
   );
@@ -5714,7 +5717,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   helperSegmentTextActive: {
-    color: "#1E3A8A",
+    color: "#147D73",
   },
   helperEmergencyLabel: {
     flexDirection: "row",
@@ -5750,15 +5753,10 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   helperListTitle: {
-    color: "#2D3748",
-    fontSize: 18,
-    fontWeight: "700",
+    color: "#203B36", fontSize: 20, fontWeight: "600", letterSpacing: -0.4,
   },
   helperListSub: {
-    color: "#64748B",
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 3,
+    color: "#647870", fontSize: 13, fontWeight: "400", lineHeight: 20, marginTop: 5,
   },
   helperListContent: {
     paddingBottom: 28,
@@ -6061,22 +6059,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   requestCard: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderLeftWidth: 4,
-    shadowColor: "#193D39",
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    marginHorizontal: 20, marginBottom: 14, backgroundColor: "#FFFFFF", borderRadius: 22, padding: 18, borderWidth: 1, borderColor: "#DFE7E1",
   },
   urgentCard: {
-    borderColor: "rgba(255,23,68,0.35)",
+    borderColor: "rgba(204,64,81,0.35)",
   },
   urgentLabel: {
     color: theme.red,
@@ -6100,15 +6086,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   requestNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 3,
+    flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 4,
   },
   requestUserName: {
-    color: "#2D3748",
-    fontSize: 18,
-    fontWeight: "700",
+    color: "#203B36", fontSize: 17, fontWeight: "600", flexShrink: 1,
   },
   urgentPill: {
     borderRadius: 9,
@@ -6122,20 +6103,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   buddyRequestBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 10,
-    backgroundColor: "#FFF2D8",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginBottom: 11,
+    alignSelf: "flex-start", borderRadius: 10, backgroundColor: "#E7F2EE", paddingHorizontal: 10, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 12,
   },
   buddyRequestText: {
-    color: "#B45309",
-    fontSize: 10,
-    fontWeight: "700",
+    color: "#147D73", fontSize: 10, fontWeight: "600",
   },
   requestCategoryText: {
     fontSize: 12,
@@ -6143,28 +6114,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   requestMessage: {
-    color: "#64748B",
-    fontSize: 14,
-    fontWeight: "700",
-    lineHeight: 20,
+    color: "#647870", fontSize: 14, fontWeight: "400", lineHeight: 22,
   },
   metaText: {
-    color: theme.orange,
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 8,
+    color: "#647870", fontSize: 12, fontWeight: "500", marginTop: 10,
   },
+  acceptButtonPressed: { backgroundColor: "#116A62", transform: [{ scale: 0.98 }] },
   acceptButton: {
-    backgroundColor: "#075FBE",
-    borderRadius: 15,
-    minHeight: 56,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 14,
+    backgroundColor: "#147D73", borderRadius: 16, minHeight: 52, paddingHorizontal: 18, paddingVertical: 14, flexDirection: "row", gap: 10, alignItems: "center", justifyContent: "center", marginTop: 18,
   },
   acceptButtonText: {
-    color: "#fff",
-    fontWeight: "700",
+    color: "#FFFFFF", fontSize: 15, fontWeight: "600",
   },
   communitySubtitle: { color: "#647870", fontSize: 14, lineHeight: 22, marginBottom: 24 },
   communityTabSelected: { backgroundColor: "#147D73" },
