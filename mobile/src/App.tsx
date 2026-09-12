@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   Alert,
   Animated,
   FlatList,
@@ -209,26 +210,26 @@ function useRequestReview() {
 }
 
 const theme = {
-  orange: "#FF6B35",
-  red: "#FF1744",
+  orange: "#DF6654",
+  red: "#CC4051",
   green: "#00A86B",
-  teal: "#00897B",
-  cream: "#FFF8F5",
+  teal: "#147D73",
+  cream: "#F5F6F2",
   card: "#FFFFFF",
-  text: "#1C0A00",
-  muted: "#8B6F63",
+  text: "#203B36",
+  muted: "#647870",
   border: "rgba(255, 107, 53, 0.16)",
 };
 
 const categories: Category[] = [
-  { id: "medical", label: "Medical", icon: "medical", color: "#FF1744", bg: "#FFF0F3" },
+  { id: "medical", label: "Medical", icon: "medical", color: "#CC4051", bg: "#FFF0F3" },
   { id: "blood", label: "Blood Donation", icon: "water", color: "#D50000", bg: "#FFF1F1" },
   { id: "accident", label: "Accident", icon: "car-sport", color: "#FF6D00", bg: "#FFF7EC" },
   { id: "lost-found", label: "Lost & Found", icon: "search", color: "#5E35B1", bg: "#F4F0FF" },
   { id: "safety", label: "Safety", icon: "shield-checkmark", color: "#C62828", bg: "#FFF0F0" },
   { id: "mental", label: "Mental", icon: "heart", color: "#7C4DFF", bg: "#F4F0FF" },
-  { id: "transport", label: "Vehicle", icon: "car", color: "#1565C0", bg: "#EEF4FF" },
-  { id: "home", label: "Home", icon: "home", color: "#00897B", bg: "#EAF7F4" },
+  { id: "transport", label: "Vehicle", icon: "car", color: "#1565C0", bg: "#E7F2EE" },
+  { id: "home", label: "Home", icon: "home", color: "#147D73", bg: "#EAF7F4" },
 ];
 
 const nearbyRequests: Request[] = [
@@ -545,7 +546,7 @@ const communityFeed: CommunityPost[] = [
     time: "5h ago",
     message: "District 5 helper network has reached 500 active members. Thank you all.",
     likes: 67,
-    color: "#1652B7",
+    color: "#147D73",
   },
   {
     id: "c3",
@@ -555,7 +556,7 @@ const communityFeed: CommunityPost[] = [
     time: "8h ago",
     message: "Completed my 40th mission today. Every small act of help creates a ripple of good.",
     likes: 31,
-    color: "#FF6B35",
+    color: "#DF6654",
   },
 ];
 
@@ -715,7 +716,7 @@ const aboutSections: LegalSection[] = [
       "A world where nobody faces a crisis alone. A world where help is always seconds away.",
       "We are not building an app. We are building the emergency response infrastructure the world never had.",
     ],
-    accent: "#1B2A6B",
+    accent: "#193D39",
   },
   {
     title: "Our Values",
@@ -812,10 +813,25 @@ function Screen({ children, dark }: { children: React.ReactNode; dark?: boolean 
   const { isDark } = useAppTheme();
   const useDark = dark ?? isDark;
   const tabBarHeight = useContext(BottomTabBarHeightContext);
+  const entrance = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    let active = true;
+    let animation: Animated.CompositeAnimation | undefined;
+    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", reduced => {
+      if (reduced) { animation?.stop(); entrance.setValue(1); }
+    });
+    AccessibilityInfo.isReduceMotionEnabled().then(reduced => {
+      if (!active || reduced) return;
+      entrance.setValue(0);
+      animation = Animated.timing(entrance, { toValue: 1, duration: 320, useNativeDriver: true });
+      animation.start();
+    }).catch(() => {});
+    return () => { active = false; animation?.stop(); subscription.remove(); };
+  }, [entrance]);
   return (
     <SafeAreaView edges={tabBarHeight == null ? ["top", "right", "bottom", "left"] : ["top", "right", "left"]} style={[styles.safe, useDark && styles.safeDark]}>
       <KeyboardAvoidingView style={styles.screenBody} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        {children}
+        <Animated.View style={{ flex: 1, minHeight: 0, opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>{children}</Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -851,29 +867,29 @@ function ModeScreen({ navigation }: any) {
     <Screen dark={isDark}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <View style={styles.homeToolbar}>
-      <Text style={[styles.homeEyebrow, isDark && styles.mutedOnDark]}>YOUR COMMUNITY, CONNECTED</Text>
+      <Text style={[styles.homeEyebrow, isDark && styles.mutedOnDark]}>EMERGE AID / COMMUNITY CARE</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Open settings" style={({ pressed }) => [styles.homeSettingsButton, isDark && styles.homeSettingsButtonDark, pressed && styles.categoryPressed]} onPress={() => navigation.navigate("Settings")}>
-        <Ionicons name="settings-outline" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
+        <Ionicons name="settings-outline" size={22} color={isDark ? "#E5EEFF" : "#193D39"} />
       </Pressable>
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.homeContent, isDark && styles.homeContentDark]}>
         <View style={[styles.homeLogoPlate, isDark && styles.homeLogoPlateDark]}>
           <Image source={emergeAidLogo} style={styles.homeLogo} />
         </View>
-        <Text style={[styles.homeTitle, isDark && styles.homeTitleDark]}>How can Emerge Aid help?</Text>
-        <Text style={[styles.homeSubtitle, isDark && styles.homeSubtitleDark]}>Community emergency assistance - available now</Text>
+        <Text style={[styles.homeTitle, isDark && styles.homeTitleDark]}>{"A little closer.\nA lot safer."}</Text>
+        <Text style={[styles.homeSubtitle, isDark && styles.homeSubtitleDark]}>Find the support you need. Be there for someone nearby.</Text>
         <ModeCard
-          title="I Need Help"
+          title="Find help"
           subtitle="Request emergency assistance from nearby helpers"
           icon="medkit"
-          colors={["#FF5A3D", "#E71933"]}
+          colors={["#193D39", "#147D73"]}
           onPress={() => navigation.navigate("RequesterTabs")}
         />
         <ModeCard
-          title="I Can Help"
+          title="Lend a hand"
           subtitle="Respond to requests from people in need nearby"
           icon="hand-left"
-          colors={["#1BA3F7", "#1652B7"]}
+          colors={["#249C8D", "#147D73"]}
           onPress={() => navigation.navigate("HelperTabs")}
         />
         {user?.role === "admin" ? (
@@ -881,7 +897,7 @@ function ModeScreen({ navigation }: any) {
             title="Admin Review"
             subtitle="Approve help requests before they appear to helpers"
             icon="shield-checkmark"
-            colors={["#14213D", "#0B67D1"]}
+            colors={["#193D39", "#147D73"]}
             onPress={() => navigation.navigate("AdminDashboard")}
           />
         ) : null}
@@ -1005,16 +1021,16 @@ function tabIcon(name: keyof typeof Ionicons.glyphMap) {
 function tabOptions(isDark: boolean, bottomInset: number) {
   return {
   headerShown: false,
-  tabBarActiveTintColor: isDark ? "#93C5FD" : "#1652B7",
+  tabBarActiveTintColor: isDark ? "#8AD9C5" : "#147D73",
   tabBarInactiveTintColor: isDark ? "#94A3B8" : "#6B7280",
   tabBarStyle: {
     height: 60 + Math.max(bottomInset, 8),
     paddingBottom: Math.max(bottomInset, 8),
     paddingTop: 8,
-    backgroundColor: isDark ? "#101C2F" : "rgba(255,255,255,0.94)",
-    borderTopColor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(22, 82, 183, 0.08)",
+    backgroundColor: isDark ? "#142724" : "rgba(255,255,255,0.94)",
+    borderTopColor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(20, 125, 115, 0.08)",
     borderTopWidth: 1,
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: isDark ? 0 : 0.03,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: -5 },
@@ -1210,13 +1226,13 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
         </View>
 
         <View style={styles.requestSectionHeader}>
-          <Text style={[styles.requestSectionTitle, isDark && styles.textOnDark]}>Request Specific Help</Text>
+          <Text style={[styles.requestSectionTitle, isDark && styles.textOnDark]}>What do you need?</Text>
           <View style={styles.termsPill}>
             <Text style={styles.termsText}>T&C</Text>
           </View>
         </View>
         <Text style={[styles.requestSectionSub, isDark && styles.mutedOnDark]}>
-          Tap a category - you'll be asked for photo/video proof and a description
+          Choose a category, then tell us a little more.
         </Text>
         <View style={styles.categoryGrid}>
           {categories.map(cat => (
@@ -1224,7 +1240,7 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
               key={cat.id}
               style={({ pressed }) => [
                 styles.categoryCard,
-                { backgroundColor: cat.bg, borderColor: "rgba(17, 24, 39, 0.06)" },
+                { backgroundColor: isDark ? "#142724" : "#FFFFFF", borderColor: isDark ? "#2D4640" : "#DFE7E1" },
                 pressed && styles.categoryPressed,
               ]}
               onPress={() => {
@@ -1232,7 +1248,8 @@ function RequesterHome({ navigation, route, rootNavigation: providedRootNavigati
               }}
             >
               <Ionicons name={cat.icon} size={25} color={cat.color} />
-              <Text style={[styles.categoryText, { color: cat.color }]}>{cat.label}</Text>
+              <Text style={[styles.categoryText, { color: isDark ? "#E6F3EE" : "#203B36" }]}>{cat.label}</Text>
+              <Ionicons name="chevron-forward" size={14} color="#81968D" />
             </Pressable>
           ))}
         </View>
@@ -1412,7 +1429,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
             <Text style={[styles.proofText, isDark && styles.mutedOnDark]}>{proofAsset ? "Proof added" : "Add a photo or video as proof"}</Text>
             {proofAsset ? (
               <View style={styles.proofSelectedPill}>
-                <Ionicons name={proofAsset.type === "video" ? "videocam" : "image"} size={16} color="#1652B7" />
+                <Ionicons name={proofAsset.type === "video" ? "videocam" : "image"} size={16} color="#147D73" />
                 <Text style={styles.proofSelectedText} numberOfLines={1}>
                   {proofAsset.name}
                 </Text>
@@ -1458,7 +1475,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
               }}
             >
               <View style={styles.requestCustomIcon}>
-                <Ionicons name="create-outline" size={17} color={customMessageOpen ? "#fff" : "#1652B7"} />
+                <Ionicons name="create-outline" size={17} color={customMessageOpen ? "#fff" : "#147D73"} />
               </View>
               <View style={styles.requestCustomCopy}>
                 <Text style={[styles.requestCustomText, customMessageOpen && styles.requestPresetTextSelected]}>Custom message</Text>
@@ -1482,7 +1499,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
           ) : selectedPreset ? (
             <View style={[styles.describeMoreBox, isDark && styles.surfaceDark]}>
               <View style={styles.selectedPresetBox}>
-                <Ionicons name="checkmark-circle" size={18} color="#1652B7" />
+                <Ionicons name="checkmark-circle" size={18} color="#147D73" />
                 <Text style={styles.selectedPresetText}>{selectedPreset}</Text>
               </View>
               <Text style={[styles.describeMoreLabel, isDark && styles.textOnDark]}>Describe more <Text style={styles.required}>*</Text></Text>
@@ -1524,7 +1541,7 @@ function RequestDetailsScreen({ navigation, route }: any) {
           </View>
           <View style={[styles.urgencyReviewCard, isDark && styles.softPanelDark]}>
             <View style={styles.urgencyReviewHeader}>
-              <Ionicons name="shield-checkmark" size={17} color="#1652B7" />
+              <Ionicons name="shield-checkmark" size={17} color="#147D73" />
               <Text style={[styles.urgencyReviewTitle, isDark && styles.textOnDark]}>Admin finalizes urgency</Text>
             </View>
             <Text style={[styles.urgencyReviewText, isDark && styles.mutedOnDark]}>
@@ -1581,8 +1598,8 @@ function RequesterHeader({ onSwitch }: { onSwitch: () => void }) {
         <Image source={emergeAidLogo} style={styles.requesterHeaderLogoImage} />
       </View>
       <View style={styles.requesterHeaderCopy}>
-        <Text style={styles.requesterEyebrow}>REQUESTER MODE</Text>
-        <Text style={styles.requesterTitle}>Need Help?</Text>
+        <Text style={styles.requesterEyebrow}>YOUR SAFETY SPACE</Text>
+        <Text style={styles.requesterTitle}>Help starts here.</Text>
       </View>
       <Pressable style={styles.headerIconButton}>
         <Ionicons name="notifications-outline" size={18} color="#fff" />
@@ -1725,7 +1742,7 @@ function SafeCheckIn({
       <Screen>
         <View style={styles.checkInCenter}>
           <View style={styles.checkIconSoft}>
-            <Ionicons name="lock-closed" size={34} color="#1652B7" />
+            <Ionicons name="lock-closed" size={34} color="#147D73" />
           </View>
           <Text style={styles.checkTitle}>Safe Check-In locked</Text>
           <Text style={styles.checkSub}>
@@ -1854,7 +1871,7 @@ function SafeCheckIn({
     <Screen>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.checkIntro}>
         <View style={styles.checkIconSoft}>
-          <Ionicons name="shield-checkmark" size={38} color="#1652B7" />
+          <Ionicons name="shield-checkmark" size={38} color="#147D73" />
         </View>
         <Text style={styles.checkTitle}>Safe Check-In</Text>
         <Text style={styles.checkSub}>
@@ -2135,14 +2152,14 @@ function HelperHome({ navigation, rootNavigation: providedRootNavigation }: any)
       <FlatList
         ListHeaderComponent={
           <>
-            <LinearGradient colors={["#0B67D1", "#0857B6"]} style={styles.helperHero}>
+            <LinearGradient colors={["#147D73", "#193D39"]} style={styles.helperHero}>
               <View style={styles.helperHeroTop}>
                 <View style={styles.helperLogoBox}>
                   <Image source={emergeAidLogo} style={styles.helperLogoImage} />
                 </View>
                 <View style={styles.helperHeroCopy}>
-                  <Text style={styles.helperEyebrow}>HELPER MODE</Text>
-                  <Text style={styles.helperHeroTitle}>Ready to Help?</Text>
+                  <Text style={styles.helperEyebrow}>YOUR COMMUNITY</Text>
+                  <Text style={styles.helperHeroTitle}>Small acts. Real impact.</Text>
                 </View>
                 <Pressable style={styles.helperSwitchButton} onPress={() => rootNavigation.popTo("Mode")}>
                   <Ionicons name="swap-horizontal" size={16} color="#fff" />
@@ -2253,7 +2270,7 @@ function MissionChat({ request, onBack }: { request: Request; onBack: () => void
   return (
     <Screen>
       <View style={[styles.chatScreen, isDark && styles.darkScreen]}>
-        <LinearGradient colors={["#1652B7", "#2F75C8"]} style={styles.chatHeader}>
+        <LinearGradient colors={["#147D73", "#2F75C8"]} style={styles.chatHeader}>
           <Pressable style={styles.chatBackButton} onPress={onBack}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </Pressable>
@@ -2298,7 +2315,7 @@ function MissionChat({ request, onBack }: { request: Request; onBack: () => void
               </Pressable>
             ))}
             <Pressable style={({ pressed }) => [styles.customChip, pressed && styles.categoryPressed]} onPress={() => setCustomOpen(value => !value)}>
-              <Ionicons name="create-outline" size={17} color="#1652B7" />
+              <Ionicons name="create-outline" size={17} color="#147D73" />
               <Text style={styles.customChipText}>Custom message</Text>
             </Pressable>
           </View>
@@ -2372,7 +2389,7 @@ function ResponderMap() {
         <View style={[styles.orgInfoCard, isDark && styles.surfaceDark]}>
           <View style={styles.orgInfoHeader}>
             <View style={styles.orgMark}>
-              <Ionicons name="ribbon" size={24} color="#1652B7" />
+              <Ionicons name="ribbon" size={24} color="#147D73" />
             </View>
             <View style={styles.orgInfoCopy}>
               <Text style={[styles.orgName, isDark && styles.textOnDark]}>{helperOrganisation.name}</Text>
@@ -2413,7 +2430,7 @@ function OrgMeta({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
 
   return (
     <View style={styles.orgMetaItem}>
-      <Ionicons name={icon} size={15} color="#1652B7" />
+      <Ionicons name={icon} size={15} color="#147D73" />
       <Text style={[styles.orgMetaLabel, isDark && styles.mutedOnDark]}>{label}</Text>
       <Text style={[styles.orgMetaValue, isDark && styles.textOnDark]}>{value}</Text>
     </View>
@@ -2425,7 +2442,7 @@ function CommunityTrustLine({ icon, text }: { icon: keyof typeof Ionicons.glyphM
 
   return (
     <View style={styles.communityTrustLine}>
-      <Ionicons name={icon} size={16} color="#1652B7" />
+      <Ionicons name={icon} size={16} color="#147D73" />
       <Text style={[styles.communityTrustText, isDark && styles.mutedOnDark]}>{text}</Text>
     </View>
   );
@@ -2448,7 +2465,7 @@ function CommunityPostCard({ post }: { post: CommunityPost }) {
           <Text style={[styles.communityTime, isDark && styles.mutedOnDark]}>{post.time}</Text>
           {post.org ? (
             <View style={styles.communityOrgPill}>
-              <Ionicons name="ribbon" size={12} color="#1652B7" />
+              <Ionicons name="ribbon" size={12} color="#147D73" />
               <Text style={styles.communityOrgText}>{post.org}</Text>
             </View>
           ) : null}
@@ -2475,7 +2492,7 @@ function GroupMissionCard({ mission }: { mission: GroupMission }) {
     <View style={[styles.groupMissionCard, isDark && styles.surfaceDark, mission.urgent && styles.groupMissionUrgent]}>
       <View style={styles.groupMissionHeader}>
         <View style={styles.groupMissionIcon}>
-          <Ionicons name="people" size={22} color="#1652B7" />
+          <Ionicons name="people" size={22} color="#147D73" />
         </View>
         <View style={styles.groupMissionCopy}>
           <View style={styles.communityNameRow}>
@@ -2513,7 +2530,7 @@ function ResponderStats() {
   return (
     <Screen>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.rankingScroll}>
-        <LinearGradient colors={["#0B67D1", "#0857B6"]} style={styles.rankingHero}>
+        <LinearGradient colors={["#147D73", "#193D39"]} style={styles.rankingHero}>
           <Text style={styles.rankingEyebrow}>HELPER RANK</Text>
           <View style={styles.rankingTierRow}>
             <View style={[styles.rankingTierIcon, { backgroundColor: currentTier.color }]}>
@@ -2669,7 +2686,7 @@ function LegalScreen({
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.legalScroll, isDark && styles.darkScreen]}>
         <LinearGradient colors={["#EFF6FF", "#ECFEFF"]} style={styles.legalHero}>
           <Pressable style={styles.legalBackButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} color="#1B2A6B" />
+            <Ionicons name="chevron-back" size={22} color="#193D39" />
           </Pressable>
           <Image source={emergeAidSplash} style={styles.legalLogo} />
           <Text style={styles.legalEyebrow}>Emerge Aid</Text>
@@ -2781,14 +2798,14 @@ function AdminDashboardScreen({ navigation }: any) {
                 <Text style={[styles.proofModalSub, isDark && styles.mutedOnDark]}>{proofPreview?.user} - {proofPreview?.proofType ?? "proof"}</Text>
               </View>
               <Pressable style={styles.proofModalClose} onPress={() => setProofPreview(null)}>
-                <Ionicons name="close" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
+                <Ionicons name="close" size={22} color={isDark ? "#E5EEFF" : "#193D39"} />
               </Pressable>
             </View>
             {proofPreview?.proofUri ? (
               <Image source={{ uri: proofPreview.proofUri }} style={styles.proofModalImage} />
             ) : (
               <View style={styles.proofModalPlaceholder}>
-                <Ionicons name={proofPreview?.proofType === "video" ? "videocam" : "image"} size={62} color="#1652B7" />
+                <Ionicons name={proofPreview?.proofType === "video" ? "videocam" : "image"} size={62} color="#147D73" />
                 <Text style={styles.proofModalPlaceholderTitle}>Demo proof image</Text>
                 <Text style={styles.proofModalPlaceholderText}>Real camera captures will appear here when submitted from the request form.</Text>
               </View>
@@ -2799,7 +2816,7 @@ function AdminDashboardScreen({ navigation }: any) {
       <FlatList
         ListHeaderComponent={
           <>
-            <LinearGradient colors={["#14213D", "#0B67D1"]} style={styles.adminHero}>
+            <LinearGradient colors={["#193D39", "#147D73"]} style={styles.adminHero}>
               <View style={styles.adminHeroTop}>
                 <View>
                   <Text style={styles.adminEyebrow}>ADMIN REVIEW</Text>
@@ -2809,7 +2826,7 @@ function AdminDashboardScreen({ navigation }: any) {
               </View>
             </LinearGradient>
             <View style={styles.adminSummaryGrid}>
-              <AdminMetric icon="time" value={String(pendingRequests.length)} label="Pending" color="#1652B7" />
+              <AdminMetric icon="time" value={String(pendingRequests.length)} label="Pending" color="#147D73" />
               <AdminMetric icon="flame" value={String(criticalCount)} label="Critical" color="#E11D48" />
               <AdminMetric icon="camera" value={String(proofCount)} label="With proof" color="#059669" />
             </View>
@@ -2879,14 +2896,14 @@ function AdminDashboardScreen({ navigation }: any) {
                   <Text style={[styles.adminPanelTitle, isDark && styles.textOnDark]}>Admin urgency decision</Text>
                   <View style={[styles.adminUrgencyControl, isDark && styles.surfaceDark]}>
                     <Pressable style={styles.adminUrgencyButton} onPress={() => updateAdminUrgency(item.id, -1, adminUrgency)}>
-                      <Ionicons name="remove" size={18} color="#1652B7" />
+                      <Ionicons name="remove" size={18} color="#147D73" />
                     </Pressable>
                     <View style={styles.adminUrgencyReadout}>
                       <Text style={[styles.adminUrgencyValue, isDark && styles.textOnDark]}>{adminUrgency}/10</Text>
                       <Text style={[styles.adminUrgencySub, isDark && styles.mutedOnDark]}>Final urgency</Text>
                     </View>
                     <Pressable style={styles.adminUrgencyButton} onPress={() => updateAdminUrgency(item.id, 1, adminUrgency)}>
-                      <Ionicons name="add" size={18} color="#1652B7" />
+                      <Ionicons name="add" size={18} color="#147D73" />
                     </Pressable>
                   </View>
                   <TextInput
@@ -2978,7 +2995,7 @@ function SettingsScreen({ navigation }: any) {
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.settingsScroll, isDark && styles.settingsScrollDark]}>
         <View style={styles.settingsHeader}>
           <Pressable style={({ pressed }) => [styles.settingsBackButton, isDark && styles.settingsBackButtonDark, pressed && styles.categoryPressed]} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} color={isDark ? "#E5EEFF" : "#1B2A6B"} />
+            <Ionicons name="chevron-back" size={22} color={isDark ? "#E5EEFF" : "#193D39"} />
           </Pressable>
           <View>
             <Text style={[styles.settingsEyebrow, isDark && styles.settingsEyebrowDark]}>EMERGE AID</Text>
@@ -2989,7 +3006,7 @@ function SettingsScreen({ navigation }: any) {
         <View style={[styles.settingsCard, isDark && styles.settingsCardDark]}>
           <View style={styles.settingsRow}>
             <View style={[styles.settingsIconBox, isDark && styles.settingsIconBoxDark]}>
-              <Ionicons name={isDark ? "moon" : "sunny"} size={20} color={isDark ? "#93C5FD" : "#F97316"} />
+              <Ionicons name={isDark ? "moon" : "sunny"} size={20} color={isDark ? "#8AD9C5" : "#F97316"} />
             </View>
             <View style={styles.settingsRowCopy}>
               <Text style={[styles.settingsRowTitle, isDark && styles.settingsRowTitleDark]}>{isDark ? "Dark mode" : "Light mode"}</Text>
@@ -3023,7 +3040,7 @@ function SettingsScreen({ navigation }: any) {
         </View>
 
         <View style={[styles.settingsContactCard, isDark && styles.settingsContactCardDark]}>
-          <Ionicons name="mail" size={22} color={isDark ? "#93C5FD" : "#1652B7"} />
+          <Ionicons name="mail" size={22} color={isDark ? "#8AD9C5" : "#147D73"} />
           <Text style={[styles.settingsContactTitle, isDark && styles.settingsContactTitleDark]}>Contact Emerge Aid</Text>
           <Text style={[styles.settingsContactText, isDark && styles.settingsContactTextDark]}>
             For business enquiries, suggestions, feedback, partnerships, or app support, contact us at:
@@ -3057,7 +3074,7 @@ function SettingsLink({
   return (
     <Pressable style={({ pressed }) => [styles.settingsLink, pressed && styles.categoryPressed]} onPress={onPress}>
       <View style={[styles.settingsIconBox, dark && styles.settingsIconBoxDark]}>
-        <Ionicons name={icon} size={20} color={dark ? "#93C5FD" : "#1652B7"} />
+        <Ionicons name={icon} size={20} color={dark ? "#8AD9C5" : "#147D73"} />
       </View>
       <View style={styles.settingsRowCopy}>
         <Text style={[styles.settingsRowTitle, dark && styles.settingsRowTitleDark]}>{title}</Text>
@@ -3139,7 +3156,7 @@ function AppContent() {
         <RequestReviewContext.Provider value={{ pendingRequests, approvedRequests, submitForReview, approveRequest, rejectRequest }}>
           <View style={[styles.appShell, isDark && styles.safeDark]}>
           <NavigationContainer theme={isDark ? DarkTheme : DefaultTheme}>
-            <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: isDark ? "#07111F" : "#F5F7FB" } }}>
+            <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: isDark ? "#0C1918" : "#F5F6F2" } }}>
               {!user ? <Stack.Screen name="Login" component={LoginScreen} /> : !user.emailVerified ? <Stack.Screen name="VerifyEmail" component={LoginScreen} /> : <Stack.Group navigationKey={user.uid}>
               <Stack.Screen name="Mode" component={ModeScreen} />
               <Stack.Screen name="RequesterTabs" component={RequesterTabs} />
@@ -3221,9 +3238,9 @@ const styles = StyleSheet.create({
   appShell: {
     flex: 1,
     width: "100%",
-    maxWidth: 600,
+    maxWidth: 760,
     alignSelf: "center",
-    backgroundColor: "#F5F7FB",
+    backgroundColor: "#F5F6F2",
   },
   screenBody: {
     flex: 1,
@@ -3256,7 +3273,7 @@ const styles = StyleSheet.create({
     width: 230,
     height: 230,
     borderRadius: 115,
-    backgroundColor: "rgba(22, 82, 183, 0.16)",
+    backgroundColor: "rgba(20, 125, 115, 0.16)",
   },
   startupLogoShell: {
     width: 188,
@@ -3273,21 +3290,21 @@ const styles = StyleSheet.create({
   },
   safe: {
     flex: 1,
-    backgroundColor: "#F5F7FB",
+    backgroundColor: "#F5F6F2",
   },
   safeDark: {
-    backgroundColor: "#07111F",
+    backgroundColor: "#0C1918",
   },
   darkScreen: {
-    backgroundColor: "#07111F",
+    backgroundColor: "#0C1918",
   },
   surfaceDark: {
-    backgroundColor: "#101C2F",
+    backgroundColor: "#142724",
     borderColor: "rgba(148, 163, 184, 0.18)",
     shadowOpacity: 0,
   },
   softPanelDark: {
-    backgroundColor: "#0D1A2B",
+    backgroundColor: "#11221F",
     borderColor: "rgba(148, 163, 184, 0.16)",
   },
   softPillDark: {
@@ -3295,13 +3312,13 @@ const styles = StyleSheet.create({
     borderColor: "rgba(147, 197, 253, 0.18)",
   },
   segmentDark: {
-    backgroundColor: "#0D1A2B",
+    backgroundColor: "#11221F",
   },
   trackDark: {
     backgroundColor: "#1F2B3D",
   },
   inputDark: {
-    backgroundColor: "#07111F",
+    backgroundColor: "#0C1918",
     borderColor: "rgba(148, 163, 184, 0.24)",
     color: "#F8FAFC",
   },
@@ -3352,7 +3369,7 @@ const styles = StyleSheet.create({
   brand: {
     color: "#fff",
     fontSize: 26,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   tagline: {
     color: "rgba(255,255,255,0.82)",
@@ -3363,7 +3380,7 @@ const styles = StyleSheet.create({
   modeLabel: {
     color: "rgba(255,255,255,0.72)",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 8,
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -3377,17 +3394,13 @@ const styles = StyleSheet.create({
   switchText: {
     color: "#fff",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   homeContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 32,
-    alignItems: "center",
+    flexGrow: 1, paddingHorizontal: 28, paddingTop: 12, paddingBottom: 36, alignItems: "flex-start",
   },
   homeContentDark: {
-    backgroundColor: "#07111F",
+    backgroundColor: "#0C1918",
   },
   homeSettingsButton: {
     width: 44,
@@ -3398,15 +3411,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   homeSettingsButtonDark: {
-    backgroundColor: "#101C2F",
+    backgroundColor: "#142724",
   },
   homeLogoPlate: {
-    width: 138,
-    height: 112,
-    borderRadius: 27,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
+    width: 80, height: 70, alignItems: "center", justifyContent: "center", marginBottom: 22,
   },
   homeLogoPlateDark: {
     backgroundColor: "#F8FAFC",
@@ -3419,29 +3427,16 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   homeLogo: {
-    width: 122,
-    height: 98,
-    resizeMode: "contain",
+    width: 80, height: 68, resizeMode: "contain",
   },
   homeTitle: {
-    color: "#192238",
-    fontSize: 26,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 9,
-    letterSpacing: -0.7,
-    lineHeight: 32,
+    color: "#203B36", fontSize: 42, fontWeight: "700", letterSpacing: -1.8, lineHeight: 47, marginBottom: 14,
   },
   homeTitleDark: {
     color: "#F8FAFC",
   },
   homeSubtitle: {
-    color: "#64748B",
-    fontSize: 14,
-    fontWeight: "400",
-    textAlign: "center",
-    marginBottom: 30,
-    lineHeight: 21,
+    color: "#647870", fontSize: 16, lineHeight: 25, marginBottom: 30, maxWidth: 340,
   },
   homeSubtitleDark: {
     color: "#94A3B8",
@@ -3450,20 +3445,14 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 22,
     marginBottom: 15,
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.04,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
   modeCard: {
-    minHeight: 108,
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    minHeight: 128, borderRadius: 24, padding: 22, flexDirection: "row", alignItems: "center", gap: 16,
   },
   modeIcon: {
     width: 48,
@@ -3489,25 +3478,10 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   homeStatsCard: {
-    width: "100%",
-    minHeight: 94,
-    marginTop: 12,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    shadowColor: "#14213D",
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-    paddingVertical: 18,
+    width: "100%", minHeight: 100, marginTop: 20, borderTopWidth: 1, borderColor: "#DCE5DE", flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingVertical: 22,
   },
   homeStatsCardDark: {
-    backgroundColor: "#101C2F",
+    backgroundColor: "#142724",
     borderColor: "rgba(148, 163, 184, 0.18)",
     shadowOpacity: 0,
   },
@@ -3546,7 +3520,7 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
   },
   homeContactEmail: {
-    color: "#1652B7",
+    color: "#147D73",
     fontWeight: "800",
   },
   homeLegalLinks: {
@@ -3563,10 +3537,10 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.1)",
+    borderColor: "rgba(20, 125, 115, 0.1)",
   },
   homeLegalText: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 12,
     fontWeight: "800",
   },
@@ -3586,13 +3560,13 @@ const styles = StyleSheet.create({
   adminEyebrow: {
     color: "rgba(255,255,255,0.72)",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.3,
   },
   adminTitle: {
     color: "#FFFFFF",
     fontSize: 25,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 4,
   },
   adminSub: {
@@ -3620,7 +3594,7 @@ const styles = StyleSheet.create({
   },
   adminList: {
     paddingBottom: 28,
-    backgroundColor: "#F8FAFF",
+    backgroundColor: "#F5F6F2",
   },
   adminSummaryGrid: {
     flexDirection: "row",
@@ -3633,14 +3607,14 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     paddingVertical: 13,
     alignItems: "center",
   },
   adminMetricValue: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 5,
   },
   adminMetricLabel: {
@@ -3661,19 +3635,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   adminFilterChipActive: {
-    backgroundColor: "#1652B7",
-    borderColor: "#1652B7",
+    backgroundColor: "#147D73",
+    borderColor: "#147D73",
   },
   adminFilterText: {
     color: "#64748B",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   adminFilterTextActive: {
     color: "#FFFFFF",
@@ -3684,7 +3658,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 16,
   },
   adminRequestHeader: {
@@ -3703,9 +3677,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   adminRequestUser: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   adminRequestTitleRow: {
     flexDirection: "row",
@@ -3714,7 +3688,7 @@ const styles = StyleSheet.create({
   },
   adminStatusPill: {
     borderRadius: 999,
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -3722,16 +3696,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF1F2",
   },
   adminStatusText: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 9,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   adminStatusTextNew: {
     color: "#E11D48",
   },
   adminRequestCategory: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 3,
   },
   adminRequestMessage: {
@@ -3776,13 +3750,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 13,
   },
   adminPanelTitle: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 2,
     marginBottom: 8,
   },
@@ -3813,16 +3787,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   adminSignalText: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   adminUrgencyControl: {
     minHeight: 58,
     borderRadius: 17,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -3841,9 +3815,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   adminUrgencyValue: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   adminUrgencySub: {
     color: "#64748B",
@@ -3877,7 +3851,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     overflow: "hidden",
   },
   proofModalHeader: {
@@ -3889,9 +3863,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   proofModalTitle: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   proofModalSub: {
     color: "#64748B",
@@ -3920,9 +3894,9 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   proofModalPlaceholderTitle: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 14,
   },
   proofModalPlaceholderText: {
@@ -3951,31 +3925,31 @@ const styles = StyleSheet.create({
     borderColor: "rgba(225, 29, 72, 0.18)",
   },
   adminApproveButton: {
-    backgroundColor: "#1652B7",
+    backgroundColor: "#147D73",
   },
   adminRejectText: {
     color: "#E11D48",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   adminApproveText: {
     color: "#FFFFFF",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   adminEmptyCard: {
     marginHorizontal: 18,
     borderRadius: 22,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 22,
     alignItems: "center",
   },
   adminEmptyTitle: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 10,
   },
   adminEmptySub: {
@@ -3990,10 +3964,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 28,
-    backgroundColor: "#F8FAFF",
+    backgroundColor: "#F5F6F2",
   },
   settingsScrollDark: {
-    backgroundColor: "#07111F",
+    backgroundColor: "#0C1918",
   },
   settingsHeader: {
     flexDirection: "row",
@@ -4007,27 +3981,27 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.1)",
+    borderColor: "rgba(20, 125, 115, 0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
   settingsBackButtonDark: {
-    backgroundColor: "#101C2F",
+    backgroundColor: "#142724",
     borderColor: "rgba(148, 163, 184, 0.18)",
   },
   settingsEyebrow: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.2,
   },
   settingsEyebrowDark: {
-    color: "#93C5FD",
+    color: "#8AD9C5",
   },
   settingsTitle: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 30,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 2,
   },
   settingsTitleDark: {
@@ -4037,17 +4011,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     marginBottom: 14,
     overflow: "hidden",
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
     elevation: 3,
   },
   settingsCardDark: {
-    backgroundColor: "#101C2F",
+    backgroundColor: "#142724",
     borderColor: "rgba(148, 163, 184, 0.18)",
     shadowOpacity: 0,
   },
@@ -4082,9 +4056,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingsRowTitle: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   settingsRowTitleDark: {
     color: "#F8FAFC",
@@ -4101,7 +4075,7 @@ const styles = StyleSheet.create({
   },
   settingsDivider: {
     height: 1,
-    backgroundColor: "rgba(22, 82, 183, 0.08)",
+    backgroundColor: "rgba(20, 125, 115, 0.08)",
     marginLeft: 70,
   },
   settingsDividerDark: {
@@ -4111,17 +4085,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 18,
   },
   settingsContactCardDark: {
-    backgroundColor: "#101C2F",
+    backgroundColor: "#142724",
     borderColor: "rgba(148, 163, 184, 0.18)",
   },
   settingsContactTitle: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 10,
   },
   settingsContactTitleDark: {
@@ -4138,13 +4112,13 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
   },
   settingsContactEmail: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 12,
   },
   settingsContactEmailDark: {
-    color: "#93C5FD",
+    color: "#8AD9C5",
   },
   settingsLogoutButton: {
     minHeight: 50,
@@ -4165,11 +4139,11 @@ const styles = StyleSheet.create({
   settingsLogoutText: {
     color: "#E11D48",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   legalScroll: {
     paddingBottom: 28,
-    backgroundColor: "#F8FAFF",
+    backgroundColor: "#F5F6F2",
   },
   legalHero: {
     paddingHorizontal: 22,
@@ -4199,14 +4173,14 @@ const styles = StyleSheet.create({
   legalEyebrow: {
     color: "#2563EB",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.4,
     marginTop: 8,
   },
   legalTitle: {
-    color: "#1B2A6B",
+    color: "#193D39",
     fontSize: 30,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
     marginTop: 6,
   },
@@ -4226,7 +4200,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1,
     borderColor: "rgba(37, 99, 235, 0.1)",
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.06,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 7 },
@@ -4251,18 +4225,18 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 11,
     backgroundColor: "#EEF2FF",
-    color: "#1B2A6B",
+    color: "#193D39",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
     textAlignVertical: "center",
     paddingTop: 8,
   },
   legalSectionTitle: {
     flex: 1,
-    color: "#1B2A6B",
+    color: "#193D39",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   legalParagraph: {
     color: "#334155",
@@ -4274,7 +4248,7 @@ const styles = StyleSheet.create({
   legalFooter: {
     marginHorizontal: 18,
     marginTop: 18,
-    backgroundColor: "#1B2A6B",
+    backgroundColor: "#193D39",
     borderRadius: 22,
     padding: 22,
     alignItems: "center",
@@ -4282,7 +4256,7 @@ const styles = StyleSheet.create({
   legalFooterTitle: {
     color: "#FFFFFF",
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   legalFooterText: {
     color: "rgba(255,255,255,0.72)",
@@ -4293,7 +4267,7 @@ const styles = StyleSheet.create({
   legalFooterEmail: {
     color: "#7DD3FC",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 14,
   },
   legalUpdated: {
@@ -4309,12 +4283,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1 }],
   },
   sosWrap: {
-    alignItems: "center",
-    paddingTop: 34,
-    paddingBottom: 18,
-    paddingHorizontal: 20,
-    marginHorizontal: 20,
-    marginTop: -6,
+    alignItems: "center", paddingTop: 24, paddingBottom: 20, paddingHorizontal: 16, marginHorizontal: 20, marginTop: 20, marginBottom: 12, borderWidth: 1, borderColor: "rgba(204,64,81,0.18)", borderRadius: 28,
   },
   sosRadarStage: {
     width: 268,
@@ -4442,7 +4411,7 @@ const styles = StyleSheet.create({
   sosLaunchTitle: {
     color: "#fff",
     fontSize: 27,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
     marginTop: 30,
   },
@@ -4486,7 +4455,7 @@ const styles = StyleSheet.create({
   requesterEyebrow: {
     color: "rgba(255,255,255,0.72)",
     fontSize: 9,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 0.4,
   },
   requesterTitle: {
@@ -4516,7 +4485,7 @@ const styles = StyleSheet.create({
   headerSwitchText: {
     color: "#fff",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   requestSectionHeader: {
     flexDirection: "row",
@@ -4539,7 +4508,7 @@ const styles = StyleSheet.create({
   termsText: {
     color: "#64748B",
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   requestSectionSub: {
     color: "#7A8798",
@@ -4566,32 +4535,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   categoryCard: {
-    width: "30%",
-    minHeight: 96,
-    borderWidth: 1,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    paddingHorizontal: 6,
-    shadowColor: "#14213D",
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-    flexGrow: 1,
-    flexBasis: "30%",
-    paddingVertical: 12,
+    width: "47%", flexBasis: "47%", flexGrow: 1, minHeight: 72, borderWidth: 1, borderRadius: 18, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 16,
   },
   categoryText: {
-    fontSize: 12,
-    fontWeight: "600",
-    textAlign: "center",
-    lineHeight: 17,
+    flex: 1, fontSize: 13, fontWeight: "600", lineHeight: 18,
   },
   categoryPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 1 }],
+    opacity: 0.72, transform: [{ scale: 0.98 }],
   },
   buddiesTitle: {
     color: "#2D3748",
@@ -4608,10 +4558,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.1,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
@@ -4628,7 +4578,7 @@ const styles = StyleSheet.create({
   buddyInitial: {
     color: "#fff",
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   buddyOnline: {
     position: "absolute",
@@ -4665,7 +4615,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#fff",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   detailSheet: {
     marginTop: -16,
@@ -4678,14 +4628,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 12,
     paddingBottom: 26,
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: -3 },
     elevation: 4,
   },
   detailSheetDark: {
-    backgroundColor: "#07111F",
+    backgroundColor: "#0C1918",
     shadowOpacity: 0,
   },
   sheetHandle: {
@@ -4712,7 +4662,7 @@ const styles = StyleSheet.create({
   },
   detailCategoryText: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   detailCloseButton: {
     width: 50,
@@ -4725,7 +4675,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     color: "#374151",
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "700",
     marginBottom: 12,
   },
   presetHint: {
@@ -4743,14 +4693,14 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.12)",
+    borderColor: "rgba(20, 125, 115, 0.12)",
     backgroundColor: "#F1F5FF",
     paddingHorizontal: 13,
     paddingVertical: 11,
   },
   requestPresetChipSelected: {
-    backgroundColor: "#1652B7",
-    borderColor: "#1652B7",
+    backgroundColor: "#147D73",
+    borderColor: "#147D73",
   },
   requestPresetText: {
     color: "#1E3A8A",
@@ -4765,7 +4715,7 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 15,
     borderWidth: 1.4,
-    borderColor: "#1652B7",
+    borderColor: "#147D73",
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 13,
     paddingVertical: 12,
@@ -4775,14 +4725,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   requestCustomChipSelected: {
-    backgroundColor: "#1652B7",
-    borderColor: "#1652B7",
+    backgroundColor: "#147D73",
+    borderColor: "#147D73",
   },
   requestCustomIcon: {
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: "rgba(22, 82, 183, 0.1)",
+    backgroundColor: "rgba(20, 125, 115, 0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -4790,9 +4740,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   requestCustomText: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   requestCustomSub: {
     color: "#64748B",
@@ -4807,15 +4757,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.2,
-    borderColor: "rgba(22, 82, 183, 0.12)",
+    borderColor: "rgba(20, 125, 115, 0.12)",
     padding: 4,
     marginBottom: 2,
   },
   selectedPresetBox: {
     borderRadius: 14,
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.14)",
+    borderColor: "rgba(20, 125, 115, 0.14)",
     padding: 13,
     flexDirection: "row",
     alignItems: "flex-start",
@@ -4825,13 +4775,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.2,
-    borderColor: "rgba(22, 82, 183, 0.12)",
+    borderColor: "rgba(20, 125, 115, 0.12)",
     padding: 10,
   },
   describeMoreLabel: {
     color: "#374151",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 12,
     marginBottom: 8,
   },
@@ -4878,7 +4828,7 @@ const styles = StyleSheet.create({
   },
   proofBoxDark: {
     borderColor: "rgba(148, 163, 184, 0.28)",
-    backgroundColor: "#0D1A2B",
+    backgroundColor: "#11221F",
   },
   proofText: {
     color: "#6B7280",
@@ -4900,7 +4850,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.12,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
@@ -4920,15 +4870,15 @@ const styles = StyleSheet.create({
   proofButtonText: {
     color: "#fff",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   proofSelectedPill: {
     maxWidth: "92%",
     minHeight: 38,
     borderRadius: 12,
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.14)",
+    borderColor: "rgba(20, 125, 115, 0.14)",
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -4937,7 +4887,7 @@ const styles = StyleSheet.create({
   },
   proofSelectedText: {
     flex: 1,
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 12,
     fontWeight: "800",
   },
@@ -4969,7 +4919,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.1)",
+    borderColor: "rgba(20, 125, 115, 0.1)",
     padding: 14,
     marginBottom: 14,
   },
@@ -4982,12 +4932,12 @@ const styles = StyleSheet.create({
   urgencyValueLabel: {
     color: "#374151",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   urgencyValue: {
     color: theme.red,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   urgencySliderTrack: {
     height: 34,
@@ -5031,9 +4981,9 @@ const styles = StyleSheet.create({
   },
   urgencyReviewCard: {
     borderRadius: 16,
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.14)",
+    borderColor: "rgba(20, 125, 115, 0.14)",
     padding: 13,
     marginBottom: 18,
   },
@@ -5045,7 +4995,7 @@ const styles = StyleSheet.create({
   urgencyReviewTitle: {
     color: "#1E3A8A",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   urgencyReviewText: {
     color: "#334155",
@@ -5074,13 +5024,13 @@ const styles = StyleSheet.create({
   urgencyReviewPillLabel: {
     color: "#64748B",
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 0.7,
   },
   urgencyReviewPillValue: {
     color: "#1E3A8A",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 2,
   },
   confirmBox: {
@@ -5122,12 +5072,12 @@ const styles = StyleSheet.create({
   },
   confirmStrong: {
     color: "#E11D48",
-    fontWeight: "900",
+    fontWeight: "700",
   },
   termsLink: {
     color: "#475569",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 8,
   },
   requestHelpButton: {
@@ -5153,7 +5103,7 @@ const styles = StyleSheet.create({
   requestHelpButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   timelineHero: {
     margin: 20,
@@ -5164,7 +5114,7 @@ const styles = StyleSheet.create({
   timelineTitle: {
     color: "#fff",
     fontSize: 25,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 10,
   },
   timelineSub: {
@@ -5189,7 +5139,7 @@ const styles = StyleSheet.create({
   },
   timelineDotText: {
     color: "#fff",
-    fontWeight: "900",
+    fontWeight: "700",
   },
   timelineCopy: {
     flex: 1,
@@ -5209,7 +5159,7 @@ const styles = StyleSheet.create({
   safeButtonText: {
     color: "#fff",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   checkIntro: {
     paddingHorizontal: 22,
@@ -5265,7 +5215,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    shadowColor: "#1652B7",
+    shadowColor: "#147D73",
     shadowOpacity: 0.24,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 9 },
@@ -5274,7 +5224,7 @@ const styles = StyleSheet.create({
   startCheckText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   howItWorksCard: {
     width: "100%",
@@ -5288,7 +5238,7 @@ const styles = StyleSheet.create({
   howItWorksTitle: {
     color: "#7A8798",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.4,
     marginBottom: 16,
   },
@@ -5317,14 +5267,14 @@ const styles = StyleSheet.create({
   activeEyebrow: {
     color: "#63D96A",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.2,
     marginBottom: 10,
   },
   activeTitle: {
     color: "#fff",
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   activeSub: {
     color: "rgba(255,255,255,0.84)",
@@ -5345,7 +5295,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.1,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
@@ -5354,7 +5304,7 @@ const styles = StyleSheet.create({
   timerLabel: {
     color: "#9CA3AF",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.3,
   },
   timerValue: {
@@ -5402,12 +5352,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#2DBB2D",
   },
   sosAction: {
-    backgroundColor: "#FF1744",
+    backgroundColor: "#CC4051",
   },
   checkActionText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   checkReview: {
     paddingHorizontal: 22,
@@ -5466,7 +5416,7 @@ const styles = StyleSheet.create({
   submitReviewText: {
     color: "#fff",
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   skipReview: {
     color: "#64748B",
@@ -5511,7 +5461,7 @@ const styles = StyleSheet.create({
   sosTriggeredTitle: {
     color: "#fff",
     fontSize: 27,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
     marginTop: 30,
   },
@@ -5536,7 +5486,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: theme.text,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   cardSub: {
     color: theme.muted,
@@ -5561,11 +5511,11 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
@@ -5592,7 +5542,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 16,
   },
   radiusHeader: {
@@ -5604,7 +5554,7 @@ const styles = StyleSheet.create({
   radiusTitle: {
     color: "#2D3748",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   radiusSub: {
     color: "#64748B",
@@ -5616,26 +5566,26 @@ const styles = StyleSheet.create({
     minWidth: 58,
     height: 38,
     borderRadius: 12,
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 10,
   },
   radiusBadgeText: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   radiusInput: {
     width: 78,
     height: 40,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#1652B7",
+    borderColor: "#147D73",
     backgroundColor: "#FFFFFF",
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
     paddingHorizontal: 8,
   },
@@ -5653,7 +5603,7 @@ const styles = StyleSheet.create({
   radiusTrackFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "#1652B7",
+    backgroundColor: "#147D73",
   },
   radiusThumb: {
     position: "absolute",
@@ -5664,8 +5614,8 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     backgroundColor: "#FFFFFF",
     borderWidth: 6,
-    borderColor: "#1652B7",
-    shadowColor: "#1652B7",
+    borderColor: "#147D73",
+    shadowColor: "#147D73",
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -5691,7 +5641,7 @@ const styles = StyleSheet.create({
   activitySectionTitle: {
     color: "#2D3748",
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   activitySectionMeta: {
     color: "#64748B",
@@ -5703,13 +5653,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 15,
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
     marginBottom: 12,
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -5727,7 +5677,7 @@ const styles = StyleSheet.create({
   },
   missionHistoryCategory: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 0.7,
     marginBottom: 4,
   },
@@ -5754,26 +5704,26 @@ const styles = StyleSheet.create({
   pointsValue: {
     color: "#E86A2C",
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   pointsLabel: {
     color: "#B45309",
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 1,
   },
   emptyHistoryCard: {
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 24,
     alignItems: "center",
   },
   emptyHistoryTitle: {
     color: "#334155",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 10,
   },
   emptyHistorySub: {
@@ -5821,13 +5771,13 @@ const styles = StyleSheet.create({
   helperEyebrow: {
     color: "rgba(255,255,255,0.72)",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.3,
   },
   helperHeroTitle: {
     color: "#fff",
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 2,
   },
   helperSwitchButton: {
@@ -5842,7 +5792,7 @@ const styles = StyleSheet.create({
   helperSwitchText: {
     color: "#fff",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   helperSegment: {
     minHeight: 58,
@@ -5865,7 +5815,7 @@ const styles = StyleSheet.create({
   helperSegmentText: {
     color: "rgba(255,255,255,0.84)",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   helperSegmentTextActive: {
     color: "#1E3A8A",
@@ -5906,7 +5856,7 @@ const styles = StyleSheet.create({
   helperListTitle: {
     color: "#2D3748",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   helperListSub: {
     color: "#64748B",
@@ -5929,7 +5879,7 @@ const styles = StyleSheet.create({
   statValue: {
     color: theme.green,
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   statLabel: {
     color: theme.muted,
@@ -5950,7 +5900,7 @@ const styles = StyleSheet.create({
   rankingEyebrow: {
     color: "rgba(255,255,255,0.72)",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.2,
     marginBottom: 14,
   },
@@ -5974,7 +5924,7 @@ const styles = StyleSheet.create({
   rankingTierName: {
     color: "#FFFFFF",
     fontSize: 30,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   rankingTierSub: {
     color: "rgba(255,255,255,0.82)",
@@ -5997,7 +5947,7 @@ const styles = StyleSheet.create({
   rankingProgressText: {
     color: "rgba(255,255,255,0.86)",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 9,
   },
   rankingStatsRow: {
@@ -6011,14 +5961,14 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
   rankingStatValue: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   rankingStatLabel: {
     color: "#64748B",
@@ -6030,14 +5980,14 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 16,
     marginBottom: 18,
   },
   rankingSectionTitle: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   tierLinearTrack: {
     position: "relative",
@@ -6113,15 +6063,15 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   tierCopyActive: {
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
   },
   tierCopyActiveDark: {
     backgroundColor: "rgba(37, 99, 235, 0.16)",
   },
   tierName: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   tierMeta: {
     color: "#64748B",
@@ -6136,14 +6086,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   currentTierText: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   lockedTierText: {
     color: "#64748B",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   rankingSectionHeader: {
     flexDirection: "row",
@@ -6161,7 +6111,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -6179,9 +6129,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   helperActivityTitle: {
-    color: "#172033",
+    color: "#203B36",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   helperActivityDetail: {
     color: "#64748B",
@@ -6207,12 +6157,12 @@ const styles = StyleSheet.create({
   helperPointsValue: {
     color: "#E86A2C",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   helperPointsLabel: {
     color: "#B45309",
     fontSize: 9,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   requestCard: {
     marginHorizontal: 20,
@@ -6223,7 +6173,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     borderLeftWidth: 4,
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.04,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -6235,7 +6185,7 @@ const styles = StyleSheet.create({
   urgentLabel: {
     color: theme.red,
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1,
     marginBottom: 10,
   },
@@ -6273,7 +6223,7 @@ const styles = StyleSheet.create({
   urgentPillText: {
     color: theme.red,
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   buddyRequestBadge: {
     alignSelf: "flex-start",
@@ -6289,11 +6239,11 @@ const styles = StyleSheet.create({
   buddyRequestText: {
     color: "#B45309",
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   requestCategoryText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
     marginBottom: 6,
   },
   requestMessage: {
@@ -6305,7 +6255,7 @@ const styles = StyleSheet.create({
   metaText: {
     color: theme.orange,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 8,
   },
   acceptButton: {
@@ -6318,7 +6268,7 @@ const styles = StyleSheet.create({
   },
   acceptButtonText: {
     color: "#fff",
-    fontWeight: "900",
+    fontWeight: "700",
   },
   communityScroll: {
     paddingHorizontal: 18,
@@ -6348,7 +6298,7 @@ const styles = StyleSheet.create({
     width: "49%",
     borderRadius: 13,
     backgroundColor: "#FFFFFF",
-    shadowColor: "#14213D",
+    shadowColor: "#193D39",
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -6375,7 +6325,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 16,
     marginBottom: 16,
   },
@@ -6388,7 +6338,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 15,
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -6398,7 +6348,7 @@ const styles = StyleSheet.create({
   orgName: {
     color: "#2D3748",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   orgRole: {
     color: "#64748B",
@@ -6415,7 +6365,7 @@ const styles = StyleSheet.create({
   orgTypeText: {
     color: "#2E7D32",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   orgMetaGrid: {
     gap: 10,
@@ -6433,7 +6383,7 @@ const styles = StyleSheet.create({
   orgMetaLabel: {
     color: "#64748B",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     width: 82,
   },
   orgMetaValue: {
@@ -6446,7 +6396,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 15,
     marginBottom: 14,
     gap: 13,
@@ -6466,7 +6416,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 16,
     marginBottom: 14,
   },
@@ -6485,7 +6435,7 @@ const styles = StyleSheet.create({
   communityAvatarText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   communityPostCopy: {
     flex: 1,
@@ -6499,12 +6449,12 @@ const styles = StyleSheet.create({
   communityAuthor: {
     color: "#2D3748",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   communityRating: {
     color: theme.orange,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   communityTime: {
     color: "#64748B",
@@ -6515,7 +6465,7 @@ const styles = StyleSheet.create({
   communityOrgPill: {
     alignSelf: "flex-start",
     borderRadius: 10,
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
     paddingHorizontal: 9,
     paddingVertical: 5,
     flexDirection: "row",
@@ -6524,9 +6474,9 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
   communityOrgText: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   officialPill: {
     borderRadius: 10,
@@ -6537,7 +6487,7 @@ const styles = StyleSheet.create({
   officialText: {
     color: "#334155",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   communityMessage: {
     color: "#334155",
@@ -6555,13 +6505,13 @@ const styles = StyleSheet.create({
   communityLikes: {
     color: "#64748B",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   groupMissionCard: {
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
     padding: 16,
     marginBottom: 14,
   },
@@ -6577,7 +6527,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 15,
-    backgroundColor: "#EEF4FF",
+    backgroundColor: "#E7F2EE",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -6587,7 +6537,7 @@ const styles = StyleSheet.create({
   groupMissionTitle: {
     color: "#2D3748",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   groupMissionOrg: {
     color: "#64748B",
@@ -6614,9 +6564,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   groupMissionSlots: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   chatScreen: {
     flex: 1,
@@ -6653,7 +6603,7 @@ const styles = StyleSheet.create({
   chatAvatarText: {
     color: "#fff",
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   chatHeaderCopy: {
     flex: 1,
@@ -6661,7 +6611,7 @@ const styles = StyleSheet.create({
   chatTitle: {
     color: "#fff",
     fontSize: 19,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   chatSub: {
     color: "rgba(255,255,255,0.78)",
@@ -6687,14 +6637,14 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.08)",
+    borderColor: "rgba(20, 125, 115, 0.08)",
   },
   chatBubbleMe: {
     alignSelf: "flex-end",
-    backgroundColor: "#1652B7",
+    backgroundColor: "#147D73",
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 6,
-    borderColor: "#1652B7",
+    borderColor: "#147D73",
   },
   chatBubbleSystem: {
     alignSelf: "center",
@@ -6712,7 +6662,7 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   chatBubbleTextSystem: {
-    color: "#1652B7",
+    color: "#147D73",
     textAlign: "center",
   },
   presetPanel: {
@@ -6723,12 +6673,12 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 18,
     borderTopWidth: 1,
-    borderTopColor: "rgba(22, 82, 183, 0.08)",
+    borderTopColor: "rgba(20, 125, 115, 0.08)",
   },
   presetTitle: {
     color: "#64748B",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.1,
     marginBottom: 12,
   },
@@ -6742,7 +6692,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#F1F5FF",
     borderWidth: 1,
-    borderColor: "rgba(22, 82, 183, 0.12)",
+    borderColor: "rgba(20, 125, 115, 0.12)",
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -6756,7 +6706,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.4,
-    borderColor: "#1652B7",
+    borderColor: "#147D73",
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: "row",
@@ -6764,9 +6714,9 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   customChipText: {
-    color: "#1652B7",
+    color: "#147D73",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   customMessageBox: {
     marginTop: 14,
@@ -6793,7 +6743,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 16,
-    backgroundColor: "#1652B7",
+    backgroundColor: "#147D73",
     alignItems: "center",
     justifyContent: "center",
   },

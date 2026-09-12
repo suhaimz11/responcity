@@ -17,7 +17,7 @@ export function AuthScreen({ dark = false }: { dark?: boolean }) {
   const [now, setNow] = useState(Date.now());
   const inFlight = useRef(false);
   const mounted = useRef(true);
-  const text = dark ? "#F8FAFC" : "#172033";
+  const text = dark ? "#F8FAFC" : "#203B36";
   const muted = dark ? "#A6B4C8" : "#64748B";
   const verifying = Boolean(auth.user && !auth.user.emailVerified);
   const remaining = Math.max(0, Math.ceil((auth.verificationSentAt + 60_000 - now) / 1000));
@@ -81,7 +81,7 @@ export function AuthScreen({ dark = false }: { dark?: boolean }) {
   const button = (label: string, action: () => void, secondary = false, disabled = busy) => (
     <Pressable accessibilityRole="button" accessibilityState={{ disabled, busy }} disabled={disabled} onPress={action}
       style={({ pressed }) => [styles.button, secondary && styles.secondary, (disabled || pressed) && styles.dimmed]}>
-      <Text style={[styles.buttonText, secondary && { color: dark ? "#93C5FD" : "#1652B7" }]}>{label}</Text>
+      <Text style={[styles.buttonText, secondary && { color: dark ? "#8AD9C5" : "#147D73" }]}>{label}</Text>
     </Pressable>
   );
 
@@ -90,9 +90,9 @@ export function AuthScreen({ dark = false }: { dark?: boolean }) {
       <View style={[styles.logoPlate, dark && { backgroundColor: "#F8FAFC", borderRadius: 20 }]}>
         <Image source={require("../../assets/emerge-aid-logo-transparent-balanced.png")} style={styles.logo} />
       </View>
-      <Text style={[styles.title, { color: text }]}>{verifying ? "Verify your email" : mode === "reset" ? "Reset your password" : "Welcome to Emerge Aid"}</Text>
-      <Text style={[styles.subtitle, { color: muted }]}>{verifying ? `Confirm ${auth.user?.email} to finish setting up your account.` : mode === "reset" ? "Enter your account email and we’ll send a reset link." : "Connect with your community. Get help or lend a hand."}</Text>
-      <View style={[styles.card, { backgroundColor: dark ? "#101C2F" : "#FFFFFF", borderColor: dark ? "#283549" : "#E6EBF2" }]}>
+      <Text style={[styles.title, { color: text }]}>{verifying ? "Verify your email" : mode === "reset" ? "Reset your password" : "Good to have you here."}</Text>
+      <Text style={[styles.subtitle, { color: muted }]}>{verifying ? `Confirm ${auth.user?.email} to finish setting up your account.` : mode === "reset" ? "Enter your account email and we’ll send a reset link." : "A connected community. A helping hand, closer to home."}</Text>
+      <View style={[styles.card, { backgroundColor: dark ? "#142724" : "#FFFFFF", borderColor: dark ? "#283549" : "#E6EBF2" }]}>
         {!auth.configured ? <Text accessibilityRole="alert" style={[styles.notice, { color: muted }]}>Sign-in isn’t available yet. The app’s Firebase connection still needs to be set up.</Text> : null}
         {auth.sessionError ? <>
           <Text accessibilityRole="alert" style={styles.error}>{auth.sessionError}</Text>
@@ -110,7 +110,7 @@ export function AuthScreen({ dark = false }: { dark?: boolean }) {
         </> : <>
           {mode !== "reset" ? <View accessibilityRole="tablist" style={[styles.tabs, dark && { backgroundColor: "#081321" }]}>
             {(["login", "signup"] as const).map(item => <Pressable key={item} accessibilityRole="tab" accessibilityState={{ selected: mode === item, disabled: busy }} disabled={busy} onPress={() => changeMode(item)} style={[styles.tab, mode === item && { backgroundColor: dark ? "#24344C" : "#FFFFFF" }]}>
-              <Text style={{ color: mode === item ? (dark ? "#93C5FD" : "#1652B7") : muted, fontWeight: "600" }}>{item === "login" ? "Sign in" : "Sign up"}</Text>
+              <Text style={{ color: mode === item ? (dark ? "#8AD9C5" : "#147D73") : muted, fontWeight: "600" }}>{item === "login" ? "Sign in" : "Sign up"}</Text>
             </Pressable>)}
           </View> : null}
           {mode === "signup" ? <>
@@ -123,7 +123,7 @@ export function AuthScreen({ dark = false }: { dark?: boolean }) {
             <Text style={[styles.label, { color: text }]}>Password</Text>
             <TextInput accessibilityLabel="Password" autoComplete={mode === "signup" ? "new-password" : "current-password"} autoCapitalize="none" autoCorrect={false} value={password} onChangeText={setPassword} editable={!busy} secureTextEntry={!visiblePassword} placeholder={mode === "signup" ? "At least 8 characters" : "Your password"} placeholderTextColor={muted} style={inputStyle} returnKeyType="go" onSubmitEditing={submit} />
             <Pressable accessibilityRole="button" accessibilityLabel={visiblePassword ? "Hide password" : "Show password"} disabled={busy} onPress={() => setVisiblePassword(value => !value)} style={styles.passwordToggle}>
-              <Text style={{ color: dark ? "#93C5FD" : "#1652B7" }}>{visiblePassword ? "Hide password" : "Show password"}</Text>
+              <Text style={{ color: dark ? "#8AD9C5" : "#147D73" }}>{visiblePassword ? "Hide password" : "Show password"}</Text>
             </Pressable>
           </> : null}
           {button(busy ? "Please wait…" : mode === "signup" ? "Create account" : mode === "reset" ? "Send reset link" : "Sign in", submit, false, busy || !auth.configured)}
@@ -135,13 +135,13 @@ export function AuthScreen({ dark = false }: { dark?: boolean }) {
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="Continue with Google" accessibilityState={{ disabled: busy, busy }} disabled={busy || !auth.configured} onPress={() => { void run(auth.loginWithGoogle); }}
               style={({ pressed }) => [styles.googleButton, { borderColor: dark ? "#46556D" : "#CBD5E1" }, (busy || pressed) && styles.dimmed]}>
-              <Ionicons name="logo-google" size={19} color={dark ? "#F8FAFC" : "#172033"} />
+              <Ionicons name="logo-google" size={19} color={dark ? "#F8FAFC" : "#203B36"} />
               <Text style={[styles.googleButtonText, { color: text }]}>Continue with Google</Text>
             </Pressable>
           </> : null}
           {button(mode === "reset" ? "Back to sign in" : "Forgot password?", () => changeMode(mode === "reset" ? "login" : "reset"), true)}
         </>}
-        {busy ? <ActivityIndicator accessibilityLabel="Working" color={dark ? "#93C5FD" : "#1652B7"} style={styles.activity} /> : null}
+        {busy ? <ActivityIndicator accessibilityLabel="Working" color={dark ? "#8AD9C5" : "#147D73"} style={styles.activity} /> : null}
         {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.error, dark && { color: "#FDA4AF" }]}>{error}</Text> : null}
         {message ? <Text accessibilityLiveRegion="polite" style={[styles.notice, { color: muted }]}>{message}</Text> : null}
       </View>
@@ -150,17 +150,17 @@ export function AuthScreen({ dark = false }: { dark?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, alignItems: "center", paddingHorizontal: 24, paddingTop: 32, paddingBottom: 32 },
+  scroll: { flexGrow: 1, alignItems: "center", paddingHorizontal: 24, paddingTop: 52, paddingBottom: 32 },
   logoPlate: { width: 108, height: 88, alignItems: "center", justifyContent: "center", marginBottom: 20 },
   logo: { width: 96, height: 78, resizeMode: "contain" },
-  title: { fontSize: 26, fontWeight: "700", letterSpacing: -0.7, textAlign: "center" },
+  title: { fontSize: 34, fontWeight: "700", letterSpacing: -1.2, textAlign: "center" },
   subtitle: { fontSize: 14, lineHeight: 22, textAlign: "center", marginTop: 8, marginBottom: 24, maxWidth: 360 },
-  card: { width: "100%", maxWidth: 440, padding: 20, borderWidth: 1, borderRadius: 20 },
-  tabs: { flexDirection: "row", padding: 4, backgroundColor: "#EEF4FF", borderRadius: 14, marginBottom: 20 },
+  card: { width: "100%", maxWidth: 440, padding: 28, borderWidth: 1, borderRadius: 26 },
+  tabs: { flexDirection: "row", padding: 4, backgroundColor: "#E7F2EE", borderRadius: 14, marginBottom: 20 },
   tab: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: 10 },
   label: { fontSize: 13, fontWeight: "600", marginBottom: 8 },
   input: { minHeight: 52, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderRadius: 12, fontSize: 16, marginBottom: 16 },
-  button: { minHeight: 52, padding: 12, borderRadius: 12, backgroundColor: "#1652B7", alignItems: "center", justifyContent: "center", marginTop: 8 },
+  button: { minHeight: 52, padding: 12, borderRadius: 12, backgroundColor: "#147D73", alignItems: "center", justifyContent: "center", marginTop: 8 },
   secondary: { backgroundColor: "transparent" },
   buttonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600", textAlign: "center" },
   dimmed: { opacity: 0.55 },
